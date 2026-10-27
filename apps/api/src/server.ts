@@ -11,6 +11,7 @@ const allowedOrigins = new Set(
 
 const server = createServer((req, res) => {
   const origin = req.headers.origin;
+  const pathname = new URL(req.url ?? "/", "http://localhost").pathname.replace(/\/+$/, "") || "/";
 
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
@@ -28,7 +29,17 @@ const server = createServer((req, res) => {
     return;
   }
 
-  if (req.method === "GET" && req.url === "/health") {
+  if (req.method === "GET" && pathname === "/") {
+    res.writeHead(200);
+    res.end(JSON.stringify({
+      service: "flowpay-api",
+      status: "ok",
+      endpoints: ["/health", "/ready"]
+    }));
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/health") {
     res.writeHead(200);
     res.end(JSON.stringify({
       service: "flowpay-api",
@@ -38,7 +49,7 @@ const server = createServer((req, res) => {
     return;
   }
 
-  if (req.method === "GET" && req.url === "/ready") {
+  if (req.method === "GET" && pathname === "/ready") {
     res.writeHead(200);
     res.end(JSON.stringify({
       service: "flowpay-api",

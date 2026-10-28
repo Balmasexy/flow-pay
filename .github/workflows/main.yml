@@ -1,0 +1,72 @@
+
+name: FlowPay Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/refresh-button
+
+permissions:
+  contents: read
+
+jobs:
+  build-android:
+    name: Build FlowPay Debug APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: feat/refresh-button
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK platform
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install web dependencies
+        run: npm ci --prefix apps/web
+
+      - name: Install Capacitor Android packages
+        run: npm install --prefix apps/web --no-save --package-lock=false @capacitor/core@8.5.3 @capacitor/android@8.5.3 @capacitor/cli@8.5.3
+
+      - name: Build web app with live Render API URL
+        run: npm run build --prefix apps/web
+        env:
+          VITE_API_BASE_URL: https://flowpay-backend-qz79.onrender.com
+
+      - name: Generate Android project
+        run: npx cap add android
+        working-directory: apps/web
+
+      - name: Sync Android project
+        run: npx cap sync android
+        working-directory: apps/web
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug
+        working-directory: apps/web/android
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: flowpay-debug-apk
+          path: apps/web/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7

@@ -5,7 +5,7 @@ import {
   Menu, RefreshCw, ShieldCheck, Wallet, X
 } from "lucide-react";
 
-const API_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+const API_URL = (import.meta.env.VITE_API_BASE_URL || "https://flowpay-backend-qz79.onrender.com").replace(/\/$/, "");
 
 type ApiStatus = "checking" | "connected" | "unavailable";
 type DatabaseStatus = "checking" | "connected" | "unavailable" | "not_configured";
@@ -24,6 +24,7 @@ export default function App() {
   });
   const [menuOpen, setMenuOpen] = useState(false);
   const [featureMessage, setFeatureMessage] = useState("Card issuing and controls are not connected to the backend.");
+  const [activityFilter, setActivityFilter] = useState<"all" | "transfers" | "cards">("all");
 
   async function checkApi() {
     if (!API_URL) {
@@ -169,12 +170,9 @@ export default function App() {
             </div>
             <button
               className="refresh-button"
-              onClick={() => {
-                window.sessionStorage.setItem("flowpay.currentPage", page);
-                window.location.reload();
-              }}
+              onClick={() => { void checkApi(); }}
               aria-label="Refresh FlowPay"
-              title="Refresh all FlowPay page content and connection status"
+              title="Refresh API and database connection status without reloading the page"
             >
               <RefreshCw size={16} /> Refresh
             </button>
@@ -313,36 +311,135 @@ export default function App() {
                   <button className="feature-button" onClick={() => setFeatureMessage("Freeze, PIN, and spending-limit controls need a verified card service before they can be enabled.")}>Check security tools</button>
                 </article>
               </section>
+              <section className="panel card-lifecycle">
+                <div className="panel-heading">
+                  <div><h2>Card lifecycle</h2><p>What must be verified before a real card is usable</p></div>
+                  <ShieldCheck size={20} />
+                </div>
+                <div className="card-lifecycle-row">
+                  <span className="lifecycle-number">1</span>
+                  <div><strong>Secure card provider</strong><p>Connect a verified issuing provider and keep provider secrets on the server.</p></div>
+                  <span className="workflow-status">Not connected</span>
+                </div>
+                <div className="card-lifecycle-row">
+                  <span className="lifecycle-number">2</span>
+                  <div><strong>Authenticate cardholder</strong><p>Require an authenticated customer session and confirm ownership of the card.</p></div>
+                  <span className="workflow-status">Not implemented</span>
+                </div>
+                <div className="card-lifecycle-row">
+                  <span className="lifecycle-number">3</span>
+                  <div><strong>Audit every control</strong><p>Verify freeze, unfreeze, PIN, limits, and status changes through server-side authorization.</p></div>
+                  <span className="workflow-status">Not implemented</span>
+                </div>
+                <p className="connection-help">The buttons above only explain feature readiness. They do not issue, activate, freeze, or modify a real card.</p>
+              </section>
+              <section className="panel card-history-panel">
+                <div className="panel-heading">
+                  <div><h2>Card activity and history</h2><p>Issuance, status changes, and card transactions when verified services are connected</p></div>
+                  <Clock3 size={20} />
+                </div>
+                <div className="card-history-status">
+                  <span className="status-dot" />
+                  <div><strong>No verified card history available</strong><p>FlowPay has no authenticated card-history endpoint yet. No sample card transactions or card events are shown as real.</p></div>
+                </div>
+                <button className="feature-button" onClick={() => {
+                  setActivityFilter("cards");
+                  setPage("Activity");
+                  window.sessionStorage.setItem("flowpay.currentPage", "Activity");
+                }}>Open card history</button>
+              </section>
             </section>
           ) : page === "Transfers" ? (
-            <section className="page-grid">
+            <section className="page-grid transfer-page">
               <section className="notice">
                 <div className="notice-icon"><ShieldCheck size={21} /></div>
                 <div>
-                  <strong>Transfers are safely disabled</strong>
-                  <p>The current API exposes health and readiness endpoints only. No transfer can be submitted, and no balance is changed by this preview.</p>
+                  <strong>Transfers are locked for your protection</strong>
+                  <p>This preview does not submit transfers or change balances. Transfer controls stay disabled until account authentication, recipient verification, ledger posting, and transaction monitoring are implemented and tested.</p>
                 </div>
               </section>
-              <section className="panel feature-card">
-                <div className="feature-icon"><ArrowLeftRight size={24} /></div>
-                <h2>Transfer workflow</h2>
-                <p>Before transfers can be enabled, FlowPay needs authenticated accounts, server-side double-entry posting, idempotency, limits, and audit events.</p>
-                <div className="connection-row"><span>Account authentication</span><span className="status-wait">Not implemented</span></div>
-                <div className="connection-row"><span>Ledger posting</span><span className="status-wait">Validation required</span></div>
-                <div className="connection-row"><span>Live transfers</span><span className="status-wait">Disabled</span></div>
+
+              <section className="transfer-summary panel">
+                <div className="transfer-summary-copy">
+                  <div className="eyebrow">SECURE TRANSFER WORKFLOW</div>
+                  <h2>Before money can move</h2>
+                  <p>Every step below must be implemented and verified on the server. A dashboard status alone never authorizes a payment.</p>
+                </div>
+                <span className="locked-pill"><ShieldCheck size={14} /> Transfers disabled</span>
+              </section>
+
+              <section className="workflow-grid" aria-label="Transfer security requirements">
+                <article className="panel workflow-step">
+                  <span className="workflow-number">01</span>
+                  <div className="workflow-step-heading"><ShieldCheck size={19} /><span>Authenticate customer</span></div>
+                  <p>Verify the signed-in customer and confirm they can access the source account.</p>
+                  <span className="workflow-status">Not implemented</span>
+                </article>
+                <article className="panel workflow-step">
+                  <span className="workflow-number">02</span>
+                  <div className="workflow-step-heading"><CheckCircle2 size={19} /><span>Validate recipient</span></div>
+                  <p>Resolve the bank and account details through a trusted provider before review.</p>
+                  <span className="workflow-status">Not connected</span>
+                </article>
+                <article className="panel workflow-step">
+                  <span className="workflow-number">03</span>
+                  <div className="workflow-step-heading"><Wallet size={19} /><span>Check and post ledger</span></div>
+                  <p>Check available funds, limits, idempotency, and balanced double-entry posting.</p>
+                  <span className="workflow-status">Validation required</span>
+                </article>
+                <article className="panel workflow-step">
+                  <span className="workflow-number">04</span>
+                  <div className="workflow-step-heading"><Clock3 size={19} /><span>Record outcome</span></div>
+                  <p>Keep an audit trail and reconcile pending, successful, reversed, or failed transfers.</p>
+                  <span className="workflow-status">Not implemented</span>
+                </article>
+              </section>
+
+              <section className="panel transfer-lock-panel">
+                <div className="transfer-lock-icon"><ShieldCheck size={22} /></div>
+                <div className="transfer-lock-copy">
+                  <h2>Transfer action unavailable</h2>
+                  <p>There is no active transfer endpoint in this API. The control below is intentionally disabled; no real transfer can be initiated from this screen.</p>
+                </div>
+                <button className="feature-button transfer-disabled-button" disabled aria-disabled="true">Transfers not available</button>
               </section>
             </section>
           ) : (
-            <section className="page-grid">
-              <section className="panel activity-panel">
+            <section className="page-grid activity-page">
+              <section className="notice">
+                <div className="notice-icon"><ShieldCheck size={21} /></div>
+                <div>
+                  <strong>History is read-only and not connected yet</strong>
+                  <p>Activity will only show records returned by authenticated, ledger-backed APIs. Card events and transfer records are not fabricated or inferred from dashboard status.</p>
+                </div>
+              </section>
+              <section className="panel activity-history-panel">
                 <div className="panel-heading">
-                  <div><h2>Activity history</h2><p>Account movements from the verified ledger</p></div>
+                  <div><h2>Activity history</h2><p>Filter the history view by activity type</p></div>
                   <Clock3 size={20} />
                 </div>
-                <div className="empty-state">
-                  <div className="empty-icon"><Clock3 size={23} /></div>
-                  <strong>No verified activity available</strong>
-                  <span>Activity will appear after account authentication and ledger-backed transaction history are implemented. No sample transactions are shown as real.</span>
+                <div className="history-filters" role="group" aria-label="Filter activity history">
+                  <button className={activityFilter === "all" ? "history-filter history-filter-active" : "history-filter"} onClick={() => setActivityFilter("all")}>All activity</button>
+                  <button className={activityFilter === "transfers" ? "history-filter history-filter-active" : "history-filter"} onClick={() => setActivityFilter("transfers")}>Transfers</button>
+                  <button className={activityFilter === "cards" ? "history-filter history-filter-active" : "history-filter"} onClick={() => setActivityFilter("cards")}>Card activity</button>
+                </div>
+                <div className="history-readiness-grid">
+                  <div className="history-readiness-item"><span>API connection</span><strong className={apiStatus === "connected" ? "status-ok" : apiStatus === "checking" ? "status-wait" : "status-error"}>{apiStatus === "connected" ? "Connected" : apiStatus === "checking" ? "Checking" : "Unavailable"}</strong></div>
+                  <div className="history-readiness-item"><span>Database readiness</span><strong className={databaseStatus === "connected" ? "status-ok" : databaseStatus === "checking" ? "status-wait" : "status-error"}>{databaseStatus === "connected" ? "Connected" : databaseStatus === "checking" ? "Checking" : databaseStatus === "not_configured" ? "Not configured" : "Unavailable"}</strong></div>
+                  <div className="history-readiness-item"><span>Selected view</span><strong>{activityFilter === "all" ? "All activity" : activityFilter === "transfers" ? "Transfers" : "Card activity"}</strong></div>
+                </div>
+                <div className="history-empty-state">
+                  <div className="empty-icon">{activityFilter === "cards" ? <CreditCard size={23} /> : activityFilter === "transfers" ? <ArrowLeftRight size={23} /> : <Clock3 size={23} />}</div>
+                  <strong>{activityFilter === "cards" ? "No verified card events available" : activityFilter === "transfers" ? "No verified transfer history available" : "No verified activity available"}</strong>
+                  <span>{activityFilter === "cards"
+                    ? "Card issuance, status changes, and card transactions will appear only after an authenticated card-history service is implemented."
+                    : activityFilter === "transfers"
+                      ? "Transfer records will appear only after authenticated transaction-history APIs and ledger reconciliation are implemented."
+                      : "Account, transfer, and card events will appear here when the backend returns verified history. No demo records are presented as real."}</span>
+                </div>
+                <div className="history-footer">
+                  <p>History is currently unavailable because the required customer-scoped history endpoints are not implemented.</p>
+                  <button className="refresh-button" onClick={() => { void checkApi(); }}>Refresh connection status</button>
                 </div>
               </section>
             </section>

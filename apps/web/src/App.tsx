@@ -5,7 +5,7 @@ import {
   Menu, RefreshCw, ShieldCheck, Wallet, X
 } from "lucide-react";
 
-const API_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+const API_URL = (import.meta.env.VITE_API_BASE_URL || "https://flowpay-backend-qz79.onrender.com").replace(/\/$/, "");
 
 type ApiStatus = "checking" | "connected" | "unavailable";
 type DatabaseStatus = "checking" | "connected" | "unavailable" | "not_configured";
@@ -169,12 +169,9 @@ export default function App() {
             </div>
             <button
               className="refresh-button"
-              onClick={() => {
-                window.sessionStorage.setItem("flowpay.currentPage", page);
-                window.location.reload();
-              }}
+              onClick={() => { void checkApi(); }}
               aria-label="Refresh FlowPay"
-              title="Refresh all FlowPay page content and connection status"
+              title="Refresh API and database connection status without reloading the page"
             >
               <RefreshCw size={16} /> Refresh
             </button>
@@ -315,21 +312,58 @@ export default function App() {
               </section>
             </section>
           ) : page === "Transfers" ? (
-            <section className="page-grid">
+            <section className="page-grid transfer-page">
               <section className="notice">
                 <div className="notice-icon"><ShieldCheck size={21} /></div>
                 <div>
-                  <strong>Transfers are safely disabled</strong>
-                  <p>The current API exposes health and readiness endpoints only. No transfer can be submitted, and no balance is changed by this preview.</p>
+                  <strong>Transfers are locked for your protection</strong>
+                  <p>This preview does not submit transfers or change balances. Transfer controls stay disabled until account authentication, recipient verification, ledger posting, and transaction monitoring are implemented and tested.</p>
                 </div>
               </section>
-              <section className="panel feature-card">
-                <div className="feature-icon"><ArrowLeftRight size={24} /></div>
-                <h2>Transfer workflow</h2>
-                <p>Before transfers can be enabled, FlowPay needs authenticated accounts, server-side double-entry posting, idempotency, limits, and audit events.</p>
-                <div className="connection-row"><span>Account authentication</span><span className="status-wait">Not implemented</span></div>
-                <div className="connection-row"><span>Ledger posting</span><span className="status-wait">Validation required</span></div>
-                <div className="connection-row"><span>Live transfers</span><span className="status-wait">Disabled</span></div>
+
+              <section className="transfer-summary panel">
+                <div className="transfer-summary-copy">
+                  <div className="eyebrow">SECURE TRANSFER WORKFLOW</div>
+                  <h2>Before money can move</h2>
+                  <p>Every step below must be implemented and verified on the server. A dashboard status alone never authorizes a payment.</p>
+                </div>
+                <span className="locked-pill"><ShieldCheck size={14} /> Transfers disabled</span>
+              </section>
+
+              <section className="workflow-grid" aria-label="Transfer security requirements">
+                <article className="panel workflow-step">
+                  <span className="workflow-number">01</span>
+                  <div className="workflow-step-heading"><ShieldCheck size={19} /><span>Authenticate customer</span></div>
+                  <p>Verify the signed-in customer and confirm they can access the source account.</p>
+                  <span className="workflow-status">Not implemented</span>
+                </article>
+                <article className="panel workflow-step">
+                  <span className="workflow-number">02</span>
+                  <div className="workflow-step-heading"><CheckCircle2 size={19} /><span>Validate recipient</span></div>
+                  <p>Resolve the bank and account details through a trusted provider before review.</p>
+                  <span className="workflow-status">Not connected</span>
+                </article>
+                <article className="panel workflow-step">
+                  <span className="workflow-number">03</span>
+                  <div className="workflow-step-heading"><Wallet size={19} /><span>Check and post ledger</span></div>
+                  <p>Check available funds, limits, idempotency, and balanced double-entry posting.</p>
+                  <span className="workflow-status">Validation required</span>
+                </article>
+                <article className="panel workflow-step">
+                  <span className="workflow-number">04</span>
+                  <div className="workflow-step-heading"><Clock3 size={19} /><span>Record outcome</span></div>
+                  <p>Keep an audit trail and reconcile pending, successful, reversed, or failed transfers.</p>
+                  <span className="workflow-status">Not implemented</span>
+                </article>
+              </section>
+
+              <section className="panel transfer-lock-panel">
+                <div className="transfer-lock-icon"><ShieldCheck size={22} /></div>
+                <div className="transfer-lock-copy">
+                  <h2>Transfer action unavailable</h2>
+                  <p>There is no active transfer endpoint in this API. The control below is intentionally disabled; no real transfer can be initiated from this screen.</p>
+                </div>
+                <button className="feature-button transfer-disabled-button" disabled aria-disabled="true">Transfers not available</button>
               </section>
             </section>
           ) : (
@@ -339,6 +373,20 @@ export default function App() {
                   <div><h2>Activity history</h2><p>Account movements from the verified ledger</p></div>
                   <Clock3 size={20} />
                 </div>
+                <div className="connection-row">
+                  <span>API connection</span>
+                  <span className={apiStatus === "connected" ? "status-ok" : apiStatus === "checking" ? "status-wait" : "status-error"}>
+                    <span className="status-dot" />{apiStatus === "connected" ? "Connected" : apiStatus === "checking" ? "Checking" : "Unavailable"}
+                  </span>
+                </div>
+                <div className="connection-row">
+                  <span>Database readiness</span>
+                  <span className={databaseStatus === "connected" ? "status-ok" : databaseStatus === "checking" ? "status-wait" : "status-error"}>
+                    <span className="status-dot" />
+                    {databaseStatus === "connected" ? "Connected" : databaseStatus === "checking" ? "Checking" : databaseStatus === "not_configured" ? "Not configured" : "Unavailable"}
+                  </span>
+                </div>
+                <button className="refresh-button" onClick={() => { void checkApi(); }}>Refresh connection status</button>
                 <div className="empty-state">
                   <div className="empty-icon"><Clock3 size={23} /></div>
                   <strong>No verified activity available</strong>

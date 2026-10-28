@@ -145,8 +145,10 @@ async function authenticate(req: IncomingMessage): Promise<AuthResult> {
       claims.iss !== config.issuer ||
       !audienceMatches ||
       typeof claims.exp !== "number" ||
+      !Number.isFinite(claims.exp) ||
       claims.exp <= now ||
-      (typeof claims.nbf === "number" && claims.nbf > now)
+      (claims.nbf !== undefined &&
+        (typeof claims.nbf !== "number" || !Number.isFinite(claims.nbf) || claims.nbf > now))
     ) {
       return { error: "invalid" };
     }

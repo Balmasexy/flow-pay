@@ -4,12 +4,14 @@ on:
   pull_request:
     branches:
       - feat/api-foundation
+      - feat/card-history-repair
     paths:
       - "apps/web/**"
       - ".github/workflows/flowpay-web-build.yml"
   push:
     branches:
       - feat/card-history-repair
+      - feat/financial-dashboard-profile-cards
     paths:
       - "apps/web/**"
       - ".github/workflows/flowpay-web-build.yml"

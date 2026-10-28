@@ -519,7 +519,7 @@ export default function App() {
                 {cardEvents.map((event) => <div className="transaction-row" key={event.id}>
                   <span className="transaction-symbol"><ShieldCheck size={18} /></span>
                   <div className="transaction-copy"><strong>{event.event_type}</strong><span>{formatDate(event.created_at)} · {event.outcome}</span></div>
-                </div>}
+                </div>)}
                 <button className="feature-button" onClick={() => {
                   setActivityFilter("cards");
                   setPage("Activity");

@@ -653,8 +653,12 @@ export default function App() {
                 </div>
                 <div className="history-empty-state">
                   <div className="empty-icon">{activityFilter === "cards" ? <CreditCard size={23} /> : activityFilter === "transfers" ? <ArrowLeftRight size={23} /> : <Clock3 size={23} />}</div>
-                  <strong>{transactions.length ? `${transactions.length} verified records` : activityFilter === "cards" ? "Card history is empty" : "No verified transaction history"}</strong>
-                  <span>{transactions.length ? "These records were returned by the authenticated customer-scoped API." : customerMessage}</span>
+                  <strong>{activityFilter === "cards"
+                    ? cardEvents.length ? `${cardEvents.length} card events loaded` : "Card history is empty"
+                    : transactions.length ? `${transactions.length} verified records` : "No verified transaction history"}</strong>
+                  <span>{activityFilter === "cards" && cardEvents.length
+                    ? "These read-only events belong to cards owned by the signed-in customer."
+                    : transactions.length ? "These records were returned by the authenticated customer-scoped API." : customerMessage}</span>
                 </div>
                 {activityFilter === "cards" && cardEvents.map((event) => <div className="transaction-row" key={event.id}>
                   <span className="transaction-symbol"><ShieldCheck size={18} /></span>

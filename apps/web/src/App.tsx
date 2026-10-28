@@ -8,11 +8,14 @@ import {
 const API_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
 type ApiStatus = "checking" | "connected" | "unavailable";
+type DatabaseStatus = "checking" | "connected" | "unavailable" | "not_configured";
 type Page = "Overview" | "Transfers" | "Cards" | "Activity";
 
 export default function App() {
   const [apiStatus, setApiStatus] = useState<ApiStatus>("checking");
   const [apiMessage, setApiMessage] = useState("Checking API connection…");
+  const [databaseStatus, setDatabaseStatus] = useState<DatabaseStatus>("checking");
+  const [databaseName, setDatabaseName] = useState<string | null>(null);
   const [page, setPage] = useState<Page>(() => {
     const savedPage = window.sessionStorage.getItem("flowpay.currentPage");
     return savedPage === "Transfers" || savedPage === "Cards" || savedPage === "Activity"
@@ -26,6 +29,8 @@ export default function App() {
     if (!API_URL) {
       setApiStatus("unavailable");
       setApiMessage("API URL not configured");
+      setDatabaseStatus("not_configured");
+      setDatabaseName(null);
       return;
     }
 
@@ -46,6 +51,26 @@ export default function App() {
     } catch {
       setApiStatus("unavailable");
       setApiMessage("API unavailable — check deployment and CORS");
+      setDatabaseStatus("unavailable");
+      setDatabaseName(null);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/ready`, {
+        headers: { Accept: "application/json" }
+      });
+      const readiness: { status?: string; database?: string; database_name?: string } = await response.json();
+      if (response.ok && readiness.status === "ready" && readiness.database === "connected") {
+        setDatabaseStatus("connected");
+        setDatabaseName(readiness.database_name ?? null);
+      } else {
+        setDatabaseStatus(readiness.database === "not_configured" ? "not_configured" : "unavailable");
+        setDatabaseName(null);
+      }
+    } catch {
+      setDatabaseStatus("unavailable");
+      setDatabaseName(null);
     }
   }
 
@@ -161,14 +186,14 @@ export default function App() {
             <div className="notice-icon"><ShieldCheck size={21} /></div>
             <div>
               <strong>Development preview</strong>
-              <p>This dashboard is connected only to the API health endpoint. No customer balances, transactions, cards, or payment actions are available yet.</p>
+              <p>FlowPay now checks the live API health and database-readiness endpoints. Account balances, cards, and transaction history remain hidden until authenticated, ledger-backed services are implemented.</p>
             </div>
           </section>
 
           <section className="section-heading">
             <div>
               <h2>Account overview</h2>
-              <p>Your account information will appear here when secure account services are implemented.</p>
+              <p>Live financial figures will appear only after they can be loaded from authenticated account services.</p>
             </div>
             <span className="preview-label">PREVIEW</span>
           </section>
@@ -219,12 +244,16 @@ export default function App() {
                 </span>
               </div>
               <div className="connection-row">
-                <span>Database-backed accounts</span><span className="status-wait">Not configured</span>
+                <span>Database readiness{databaseName ? ` (${databaseName})` : ""}</span>
+                <span className={databaseStatus === "connected" ? "status-ok" : databaseStatus === "checking" ? "status-wait" : "status-error"}>
+                  <span className="status-dot" />
+                  {databaseStatus === "connected" ? "Connected" : databaseStatus === "checking" ? "Checking" : databaseStatus === "not_configured" ? "Not configured" : "Unavailable"}
+                </span>
               </div>
               <div className="connection-row">
                 <span>Payments</span><span className="status-wait">Disabled</span>
               </div>
-              <p className="connection-help">The API indicator tests <code>/health</code>; it does not certify database readiness or payment functionality.</p>
+              <p className="connection-help">API status comes from <code>/health</code>; database status comes from <code>/ready</code>. A connected database does not mean account, balance, or payment features are implemented.</p>
             </article>
           </section>
 

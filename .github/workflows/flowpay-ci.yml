@@ -114,6 +114,20 @@ jobs:
             }
           '
 
+          summary_status="$(curl --silent --output "$RUNNER_TEMP/flowpay-summary.json" --write-out "%{http_code}" http://127.0.0.1:3000/v1/me/summary)"
+          if [ "$summary_status" != "503" ]; then
+            cat "$RUNNER_TEMP/flowpay-summary.json"
+            echo "Expected /v1/me/summary to fail closed when the database is not configured; got $summary_status" >&2
+            exit 1
+          fi
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const summary = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + "/flowpay-summary.json", "utf8"));
+            if (summary.error !== "DATABASE_NOT_CONFIGURED") {
+              throw new Error("Unexpected account summary response: " + JSON.stringify(summary));
+            }
+          '
+
       - name: Install web dependencies
         run: npm ci --prefix apps/web
 

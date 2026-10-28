@@ -68,7 +68,7 @@ function LandingPage() {
         <nav className="landing-links" aria-label="Main navigation">
           <a href="#features">Features</a><a href="#security">Security</a><a href="#about">About</a>
         </nav>
-        <div className="landing-nav-actions"><a className="landing-signin" href="/app">Sign in</a><a className="landing-cta" href="/app">Open FlowPay <ArrowRight size={16} /></a></div>
+        <div className="landing-nav-actions"><a className="landing-signin" href="/login">Sign in</a><a className="landing-cta" href="/signup">Create account <ArrowRight size={16} /></a></div>
       </header>
 
       <main>
@@ -77,7 +77,7 @@ function LandingPage() {
             <div className="landing-kicker"><span /> A clearer way to manage your money</div>
             <h1>Your money.<br /><em>More freedom.</em></h1>
             <p className="landing-lede">A simpler place to see your financial picture. FlowPay brings account information and activity into one clear, easy-to-use workspace.</p>
-            <div className="landing-hero-actions"><a className="landing-cta landing-cta-large" href="/app">Explore FlowPay <ArrowRight size={18} /></a><a className="landing-secondary-link" href="#features">Discover the platform <ArrowDownLeft size={17} /></a></div>
+            <div className="landing-hero-actions"><a className="landing-cta landing-cta-large" href="/login">Explore FlowPay <ArrowRight size={18} /></a><a className="landing-secondary-link" href="#features">Discover the platform <ArrowDownLeft size={17} /></a></div>
             <div className="landing-trust-line"><ShieldCheck size={17} /><span>Built around clarity, privacy, and responsible access</span></div>
           </div>
           <div className="landing-visual" aria-label="Illustration of a financial overview dashboard">
@@ -101,16 +101,105 @@ function LandingPage() {
         <section className="landing-features" id="features">
           <div className="landing-section-intro"><span className="landing-section-kicker">THE FLOWPAY EXPERIENCE</span><h2>More clarity at every step.</h2><p>Thoughtful tools that help you understand your financial activity without unnecessary complexity.</p></div>
           <div className="landing-feature-grid">
-            <article className="landing-feature"><span className="landing-feature-icon"><Wallet size={22} /></span><h3>Your financial overview</h3><p>See account information and available summaries in one organized workspace, when verified data is available.</p><a href="/app">Explore overview <ArrowRight size={15} /></a></article>
-            <article className="landing-feature"><span className="landing-feature-icon"><ArrowLeftRight size={22} /></span><h3>Activity, made clearer</h3><p>Review financial history in a straightforward layout designed to distinguish real records from unavailable data.</p><a href="/app">Explore activity <ArrowRight size={15} /></a></article>
-            <article className="landing-feature" id="security"><span className="landing-feature-icon"><ShieldCheck size={22} /></span><h3>Security-minded by default</h3><p>Customer information belongs behind authentication. Sensitive credentials and unverified balances stay out of view.</p><a href="/app">Enter workspace <ArrowRight size={15} /></a></article>
+            <article className="landing-feature"><span className="landing-feature-icon"><Wallet size={22} /></span><h3>Your financial overview</h3><p>See account information and available summaries in one organized workspace, when verified data is available.</p><a href="/login">Explore overview <ArrowRight size={15} /></a></article>
+            <article className="landing-feature"><span className="landing-feature-icon"><ArrowLeftRight size={22} /></span><h3>Activity, made clearer</h3><p>Review financial history in a straightforward layout designed to distinguish real records from unavailable data.</p><a href="/login">Explore activity <ArrowRight size={15} /></a></article>
+            <article className="landing-feature" id="security"><span className="landing-feature-icon"><ShieldCheck size={22} /></span><h3>Security-minded by default</h3><p>Customer information belongs behind authentication. Sensitive credentials and unverified balances stay out of view.</p><a href="/login">Enter workspace <ArrowRight size={15} /></a></article>
           </div>
         </section>
 
-        <section className="landing-bottom-cta"><div><span className="landing-section-kicker">A BETTER VIEW STARTS HERE</span><h2>Bring your financial picture into focus.</h2><p>Open the FlowPay workspace to explore the current experience and its available features.</p></div><a className="landing-cta landing-cta-large" href="/app">Open FlowPay <ArrowRight size={18} /></a></section>
+        <section className="landing-bottom-cta"><div><span className="landing-section-kicker">A BETTER VIEW STARTS HERE</span><h2>Bring your financial picture into focus.</h2><p>Open the FlowPay workspace to explore the current experience and its available features.</p></div><a className="landing-cta landing-cta-large" href="/login">Open FlowPay <ArrowRight size={18} /></a></section>
       </main>
       <footer className="landing-footer"><a className="landing-brand" href="/"><span className="landing-brand-mark">F</span><span>flow<span>pay</span></span></a><span>© {new Date().getFullYear()} FlowPay</span><span>Independent product · Development preview</span></footer>
     </div>
+  );
+}
+
+
+function AuthPage({ mode }: { mode: "login" | "signup" }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const isSignup = mode === "signup";
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setMessage("");
+    setError("");
+    if (!AUTH_URL) {
+      setError("Account access is not configured yet. Please contact FlowPay support.");
+      setBusy(false);
+      return;
+    }
+    try {
+      const endpoint = isSignup ? "sign-up/email" : "sign-in/email";
+      const payload = isSignup ? { name: name.trim(), email: email.trim(), password } : { email: email.trim(), password };
+      const response = await fetch(`${AUTH_URL}/${endpoint}`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(15000)
+      });
+      const result: unknown = await response.json().catch(() => ({}));
+      const record = typeof result === "object" && result !== null ? result as Record<string, unknown> : {};
+      if (!response.ok || record.error) {
+        const detail = typeof record.message === "string" ? record.message
+          : typeof record.error === "string" ? record.error : `Request failed (HTTP ${response.status})`;
+        throw new Error(detail);
+      }
+      if (isSignup) {
+        setMessage("Registration request submitted. If email verification is enabled, check your inbox to verify your address, then sign in. Your financial profile and account are not created automatically by this form.");
+        setPassword("");
+      } else {
+        const token = await getAccessToken();
+        if (!token) {
+          setMessage("Sign-in was accepted, but a session token could not be confirmed. Check the auth service configuration and try again.");
+        } else {
+          window.location.assign("/app");
+        }
+      }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Unable to complete the request. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <main className="auth-shell">
+      <a className="auth-back-link" href="/">← Back to FlowPay</a>
+      <section className="auth-layout">
+        <div className="auth-story">
+          <a className="landing-brand" href="/"><span className="landing-brand-mark">F</span><span>flow<span>pay</span></span></a>
+          <span className="landing-section-kicker">A clearer financial workspace</span>
+          <h1>{isSignup ? "Make room for more clarity." : "Welcome back to FlowPay."}</h1>
+          <p>{isSignup ? "Create your sign-in credentials to get started. Financial accounts and balances are shown only when securely configured and verified." : "Sign in securely to continue to your FlowPay workspace and view data available to your authenticated account."}</p>
+          <div className="auth-assurance"><ShieldCheck size={20} /><span>Your password is sent only to the configured authentication service.</span></div>
+        </div>
+        <div className="auth-card">
+          <div className="auth-card-heading">
+            <span className="auth-card-icon">{isSignup ? <UserRound size={21} /> : <LockKeyhole size={21} />}</span>
+            <h2>{isSignup ? "Create your account" : "Sign in"}</h2>
+            <p>{isSignup ? "Use an email address you can access." : "Enter your account details below."}</p>
+          </div>
+          <form className="auth-form" onSubmit={submit}>
+            {isSignup && <label>Full name<input autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Your full name" required minLength={2} maxLength={100} /></label>}
+            <label>Email address<span className="auth-input-wrap"><Mail size={17} /><input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" required maxLength={254} /></span></label>
+            <label>Password<span className="auth-input-wrap"><LockKeyhole size={17} /><input type="password" autoComplete={isSignup ? "new-password" : "current-password"} value={password} onChange={(event) => setPassword(event.target.value)} placeholder={isSignup ? "At least 8 characters" : "Your password"} required minLength={isSignup ? 8 : 1} maxLength={128} /></span></label>
+            {error && <p className="auth-feedback auth-error" role="alert">{error}</p>}
+            {message && <p className="auth-feedback auth-message" role="status">{message}</p>}
+            <button className="auth-submit" type="submit" disabled={busy}>{busy ? "Please wait…" : isSignup ? "Create account" : "Sign in"} <ArrowRight size={17} /></button>
+          </form>
+          <p className="auth-switch">{isSignup ? "Already registered?" : "New to FlowPay?"} <a href={isSignup ? "/login" : "/signup"}>{isSignup ? "Sign in" : "Create an account"}</a></p>
+          <p className="auth-legal">By continuing, you agree to use FlowPay responsibly. Do not share your password or authentication codes.</p>
+        </div>
+      </section>
+      <footer className="auth-footer">© {new Date().getFullYear()} FlowPay · Development preview</footer>
+    </main>
   );
 }
 
@@ -302,7 +391,7 @@ export default function App() {
     { name: "View Account Number" as const, icon: Eye }
   ];
 
-  if (window.location.pathname === "/") return <LandingPage />;
+  const pathname = window.location.pathname.replace(/\\/+$/, "") || "/";\n  if (pathname === "/") return <LandingPage />;\n  if (pathname === "/login" || pathname === "/signin") return <AuthPage mode="login" />;\n  if (pathname === "/signup" || pathname === "/register" || pathname === "/registration") return <AuthPage mode="signup" />;
 
   return (
     <div className="app-shell">

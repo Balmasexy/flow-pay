@@ -98,7 +98,7 @@ async function authenticate(req: IncomingMessage): Promise<AuthResult> {
   const authorization = req.headers.authorization;
   if (!authorization) return { error: "missing" };
 
-  const match = /^Bearer ([A-Za-z0-9._~-]+)$/.exec(authorization);
+  const match = /^Bearer ([A-Za-z0-9._-]+)$/.exec(authorization);
   if (!match || match[1].length > 16_384) return { error: "invalid" };
 
   const config = authConfig();
@@ -124,7 +124,7 @@ async function authenticate(req: IncomingMessage): Promise<AuthResult> {
       return { error: "invalid" };
     }
 
-    const publicKey = createPublicKey({ key: jwk, format: "jwk" });
+    const publicKey = createPublicKey({ key: JSON.parse(JSON.stringify(jwk)), format: "jwk" });
     const validSignature = verifySignature(
       "RSA-SHA256",
       Buffer.from(`${parts[0]}.${parts[1]}`),

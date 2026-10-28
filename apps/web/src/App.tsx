@@ -216,6 +216,24 @@ export default function App() {
             </article>
           </section>
 
+          <section className="quick-actions" aria-label="Quick navigation">
+            <button className="quick-action" onClick={() => { setPage("Transfers"); window.sessionStorage.setItem("flowpay.currentPage", "Transfers"); }}>
+              <span className="quick-action-icon"><ArrowLeftRight size={19} /></span>
+              <span><strong>Transfers</strong><small>Review secure transfer setup</small></span>
+              <span className="quick-action-arrow">↗</span>
+            </button>
+            <button className="quick-action" onClick={() => { setPage("Cards"); window.sessionStorage.setItem("flowpay.currentPage", "Cards"); }}>
+              <span className="quick-action-icon"><CreditCard size={19} /></span>
+              <span><strong>Cards</strong><small>Explore card controls</small></span>
+              <span className="quick-action-arrow">↗</span>
+            </button>
+            <button className="quick-action" onClick={() => { setPage("Activity"); window.sessionStorage.setItem("flowpay.currentPage", "Activity"); }}>
+              <span className="quick-action-icon"><Clock3 size={19} /></span>
+              <span><strong>Activity</strong><small>View activity availability</small></span>
+              <span className="quick-action-arrow">↗</span>
+            </button>
+          </section>
+
           <section className="lower-grid">
             <article className="panel activity-panel">
               <div className="panel-heading">

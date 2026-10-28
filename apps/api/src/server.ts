@@ -109,7 +109,7 @@ async function getCustomer(subject: string): Promise<Customer | null> {
   return customer;
 }
 
-function authError(res: ServerResponse, error: AuthResult extends infer _T ? string : never) {
+function authError(res: ServerResponse, error: "missing" | "invalid" | "not_configured") {
   if (error === "not_configured") sendJson(res, 503, { error: "AUTH_NOT_CONFIGURED" });
   else if (error === "missing") sendJson(res, 401, { error: "AUTHENTICATION_REQUIRED" });
   else sendJson(res, 401, { error: "INVALID_ACCESS_TOKEN" });

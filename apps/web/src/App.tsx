@@ -167,9 +167,20 @@ export default function App() {
       } else if (target === "Money Received" || target === "Money Sent" || target === "Activity") {
         const filter = target === "Money Received" ? "received"
           : target === "Money Sent" ? "sent" : activityFilter;
-        const result = await apiGet<{ transactions: Transaction[] }>(`/v1/me/transactions?type=${filter}&limit=100`);
-        setTransactions(result.transactions);
-        setCustomerMessage("Transaction history loaded from the authenticated ledger API.");
+        if (target !== "Activity") {
+          const summary = await apiGet<{ totals: SummaryTotal[] }>("/v1/me/summary");
+          setSummaryTotals(summary.totals);
+        }
+        if (filter === "cards") {
+          const result = await apiGet<{ events: CardEvent[] }>("/v1/me/card-events?limit=100");
+          setCardEvents(result.events);
+          setTransactions([]);
+          setCustomerMessage("Card audit history loaded from the authenticated customer API.");
+        } else {
+          const result = await apiGet<{ transactions: Transaction[] }>(`/v1/me/transactions?type=${filter}&limit=100`);
+          setTransactions(result.transactions);
+          setCustomerMessage("Transaction history loaded from the authenticated ledger API.");
+        }
       } else if (target === "Cards") {
         const [cardResult, eventResult] = await Promise.all([
           apiGet<{ cards: CustomerCard[] }>("/v1/me/cards"),
@@ -645,6 +656,10 @@ export default function App() {
                   <strong>{transactions.length ? `${transactions.length} verified records` : activityFilter === "cards" ? "Card history is empty" : "No verified transaction history"}</strong>
                   <span>{transactions.length ? "These records were returned by the authenticated customer-scoped API." : customerMessage}</span>
                 </div>
+                {activityFilter === "cards" && cardEvents.map((event) => <div className="transaction-row" key={event.id}>
+                  <span className="transaction-symbol"><ShieldCheck size={18} /></span>
+                  <div className="transaction-copy"><strong>{event.event_type}</strong><span>{formatDate(event.created_at)} · {event.outcome}</span></div>
+                </div>)}
                 {transactions.map((tx) => <div className="transaction-row" key={tx.id + tx.currency}>
                   <span className="transaction-symbol">{Number(tx.amount_minor) >= 0 ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}</span>
                   <div className="transaction-copy"><strong>{tx.description || tx.transaction_type}</strong><span>{formatDate(tx.created_at)} · {tx.status} · {tx.currency}</span></div>

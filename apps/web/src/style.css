@@ -337,3 +337,36 @@ footer { border-top: 1px solid #eaeae6; margin-top: 18px; }
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
 
+
+
+/* Secure Transfers workflow preview */
+.transfer-page { gap: 16px; }
+.transfer-summary { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.transfer-summary-copy { max-width: 660px; }
+.transfer-summary-copy .eyebrow { margin-bottom: 8px; }
+.transfer-summary-copy h2 { font-size: 20px; }
+.transfer-summary-copy p { color: #858780; font-size: 12px; line-height: 1.7; margin-top: 8px; }
+.locked-pill { display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0; color: #95652c; background: #fff5e9; border: 1px solid #ffe1c1; border-radius: 999px; padding: 8px 11px; font-size: 10px; font-weight: 700; }
+.workflow-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.workflow-step { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 11px; min-height: 185px; }
+.workflow-number { position: absolute; top: 17px; right: 18px; color: #d4d4ce; font: 800 18px Manrope, sans-serif; }
+.workflow-step-heading { display: flex; align-items: center; gap: 10px; padding-right: 34px; font-size: 12px; font-weight: 700; }
+.workflow-step-heading svg { color: var(--orange); flex-shrink: 0; }
+.workflow-step p { color: #858780; font-size: 11px; line-height: 1.75; }
+.workflow-status { display: inline-flex; align-items: center; margin-top: auto; border-radius: 6px; background: #f7f5f1; color: #8b744f; padding: 6px 8px; font-size: 10px; }
+.transfer-lock-panel { display: flex; align-items: center; gap: 14px; }
+.transfer-lock-icon { display: grid; place-items: center; flex: 0 0 44px; height: 44px; border-radius: 12px; background: #fff3e8; color: var(--orange); }
+.transfer-lock-copy { flex: 1; min-width: 0; }
+.transfer-lock-copy h2 { font-size: 14px; }
+.transfer-lock-copy p { margin-top: 6px; color: #858780; font-size: 11px; line-height: 1.7; }
+.transfer-disabled-button, .feature-button:disabled { opacity: .62; cursor: not-allowed; background: #f4f4f0; color: #858780; border-color: #e5e5df; }
+.feature-button:disabled:hover { border-color: #e5e5df; color: #858780; }
+@media (max-width: 700px) {
+  .transfer-summary { flex-direction: column; }
+  .transfer-summary-copy h2 { font-size: 18px; }
+  .workflow-grid { grid-template-columns: 1fr; }
+  .workflow-step { min-height: 0; }
+  .transfer-lock-panel { align-items: flex-start; flex-wrap: wrap; }
+  .transfer-lock-copy { flex-basis: calc(100% - 60px); }
+  .transfer-disabled-button { width: 100%; }
+}

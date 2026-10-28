@@ -169,12 +169,9 @@ export default function App() {
             </div>
             <button
               className="refresh-button"
-              onClick={() => {
-                window.sessionStorage.setItem("flowpay.currentPage", page);
-                window.location.reload();
-              }}
+              onClick={() => { void checkApi(); }}
               aria-label="Refresh FlowPay"
-              title="Refresh all FlowPay page content and connection status"
+              title="Refresh API and database connection status without reloading the page"
             >
               <RefreshCw size={16} /> Refresh
             </button>

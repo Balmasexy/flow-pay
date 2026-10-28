@@ -1,0 +1,36 @@
+name: FlowPay Web Build
+
+on:
+  pull_request:
+    branches:
+      - feat/api-foundation
+    paths:
+      - "apps/web/**"
+      - ".github/workflows/flowpay-web-build.yml"
+  push:
+    branches:
+      - feat/card-history-repair
+    paths:
+      - "apps/web/**"
+      - ".github/workflows/flowpay-web-build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  web-build:
+    name: Typecheck and build web app
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Install dependencies
+        run: npm ci --prefix apps/web
+      - name: Typecheck and build
+        run: npm run build --prefix apps/web

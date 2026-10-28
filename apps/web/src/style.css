@@ -453,3 +453,220 @@ footer { border-top: 1px solid #eaeae6; margin-top: 18px; }
   .transaction-amount { max-width: 38%; white-space: normal; text-align: right; overflow-wrap: anywhere; }
   .card-status-pill { font-size: 9px; }
 }
+
+
+/* Customer registration, account-number page, and virtual-card profile design */
+.profile-page > .panel { max-width: 100%; }
+.profile-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+  margin-top: 20px;
+}
+.profile-detail-grid > div {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #efefeb;
+  border-radius: 10px;
+  background: #fcfcfa;
+}
+.profile-detail-grid span, .account-number-meta > span {
+  color: #858780;
+  font-size: 10px;
+}
+.profile-detail-grid strong {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.registration-unavailable {
+  margin-top: 17px;
+  padding: 14px 15px;
+  border: 1px dashed #e7dfd6;
+  border-radius: 10px;
+  background: #fffaf5;
+}
+.registration-unavailable strong { font-size: 11px; }
+.registration-unavailable p {
+  margin-top: 6px;
+  color: #858780;
+  font-size: 11px;
+  line-height: 1.7;
+}
+.profile-account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 0;
+  border-bottom: 1px solid #f0f0ed;
+}
+.profile-account-copy { display: grid; gap: 7px; min-width: 0; }
+.profile-account-copy strong { font-size: 12px; }
+.profile-account-copy span {
+  color: #858780;
+  font-size: 10px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.profile-account-row .feature-button { margin-top: 0; flex-shrink: 0; }
+.profile-virtual-card-panel { overflow: hidden; }
+.profile-card-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(220px, .85fr);
+  align-items: center;
+  gap: 24px;
+  margin-top: 22px;
+}
+.virtual-card-art {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 218px;
+  padding: 22px;
+  border: 1px solid #49382c;
+  border-radius: 18px;
+  color: #fff;
+  background:
+    radial-gradient(ellipse at 92% 6%, #ff9d4a 0%, transparent 37%),
+    radial-gradient(ellipse at 0% 100%, #5b3928 0%, transparent 52%),
+    linear-gradient(135deg, #29221d, #171717 68%);
+  box-shadow: 0 14px 30px #1717171a;
+}
+.virtual-card-issued { border-color: #4d8e70; }
+.virtual-card-top, .virtual-card-bottom {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.virtual-card-brand { font: 800 19px Manrope, sans-serif; letter-spacing: -1px; }
+.virtual-card-brand span { color: #ff9a4b; }
+.virtual-card-chip {
+  width: 30px;
+  height: 23px;
+  border: 1px solid #ffffff8a;
+  border-radius: 5px;
+  background: linear-gradient(135deg, #e8d8b5, #9f8b65);
+  box-shadow: inset 0 0 0 4px #c4b28b;
+}
+.virtual-card-number {
+  position: relative;
+  z-index: 2;
+  margin: 30px 0 25px;
+  font: 600 clamp(15px, 1.8vw, 20px) Manrope, sans-serif;
+  letter-spacing: 1.5px;
+  white-space: nowrap;
+}
+.virtual-card-bottom { justify-content: flex-start; gap: 30px; }
+.virtual-card-bottom > div { display: grid; gap: 6px; min-width: 0; }
+.virtual-card-bottom span { color: #d2c7bd; font-size: 8px; letter-spacing: 1px; }
+.virtual-card-bottom strong {
+  max-width: 210px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 600;
+}
+.virtual-card-watermark {
+  position: absolute;
+  z-index: 1;
+  right: -10px;
+  bottom: -57px;
+  color: #ffffff0b;
+  font: 800 200px Manrope, sans-serif;
+  line-height: 1;
+  pointer-events: none;
+}
+.virtual-card-info { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.virtual-card-info > strong { font-size: 13px; }
+.virtual-card-info p {
+  color: #858780;
+  font-size: 11px;
+  line-height: 1.75;
+}
+.card-status-pill {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 6px 9px;
+  background: #f2f2ef;
+  color: #666760;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+.card-status-active { background: #eaf7ef; color: #23794f; }
+.card-status-frozen, .card-status-pending { background: #fff3df; color: #946327; }
+.card-status-blocked, .card-status-closed, .card-status-failed { background: #fff0ef; color: #b43f3b; }
+.account-number-page > .panel { max-width: 900px; }
+.account-number-card {
+  margin-top: 18px;
+  padding: 19px;
+  border: 1px solid #e9e9e3;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #fff, #fbfaf7);
+}
+.account-number-card + .account-number-card { margin-top: 13px; }
+.account-number-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.account-number-label {
+  display: block;
+  margin-top: 22px;
+  color: #858780;
+  font-size: 11px;
+}
+.account-number-value {
+  display: block;
+  margin-top: 8px;
+  font: 800 27px Manrope, sans-serif;
+  letter-spacing: -.5px;
+}
+.account-number-help {
+  margin-top: 8px;
+  color: #858780;
+  font-size: 11px;
+  line-height: 1.7;
+}
+.account-number-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid #efefeb;
+  font-size: 11px;
+}
+.account-number-meta code, .account-number-meta strong {
+  max-width: 65%;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+.account-back-button { width: fit-content; margin-top: 0; }
+@media (max-width: 900px) {
+  .profile-card-layout { grid-template-columns: 1fr; }
+  .virtual-card-art { max-width: 520px; width: 100%; }
+}
+@media (max-width: 700px) {
+  .profile-detail-grid { grid-template-columns: 1fr; gap: 9px; }
+  .profile-account-row { align-items: stretch; flex-direction: column; gap: 12px; }
+  .profile-account-row .feature-button { width: 100%; }
+  .profile-card-layout { gap: 17px; }
+  .virtual-card-art { min-height: 198px; padding: 18px; }
+  .virtual-card-number { font-size: 15px; margin: 27px 0 23px; letter-spacing: 1px; }
+  .virtual-card-bottom { gap: 16px; }
+  .virtual-card-bottom strong { max-width: 150px; }
+  .account-number-card { padding: 15px; }
+  .account-number-value { font-size: 23px; }
+  .account-number-meta { gap: 10px; }
+}

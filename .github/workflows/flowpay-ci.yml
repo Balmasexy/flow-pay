@@ -119,6 +119,8 @@ jobs:
 
       - name: Build web app
         run: npm run build --prefix apps/web
+        env:
+          VITE_API_BASE_URL: https://flowpay-backend-qz79.onrender.com
 
       - name: Install pinned Capacitor tooling without changing the lockfile
         run: npm install --prefix apps/web --no-save --package-lock=false @capacitor/core@8.5.3 @capacitor/android@8.5.3 @capacitor/cli@8.5.3

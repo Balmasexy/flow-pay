@@ -24,6 +24,7 @@ export default function App() {
   });
   const [menuOpen, setMenuOpen] = useState(false);
   const [featureMessage, setFeatureMessage] = useState("Card issuing and controls are not connected to the backend.");
+  const [activityFilter, setActivityFilter] = useState<"all" | "transfers" | "cards">("all");
 
   async function checkApi() {
     if (!API_URL) {
@@ -332,6 +333,21 @@ export default function App() {
                 </div>
                 <p className="connection-help">The buttons above only explain feature readiness. They do not issue, activate, freeze, or modify a real card.</p>
               </section>
+              <section className="panel card-history-panel">
+                <div className="panel-heading">
+                  <div><h2>Card activity and history</h2><p>Issuance, status changes, and card transactions when verified services are connected</p></div>
+                  <Clock3 size={20} />
+                </div>
+                <div className="card-history-status">
+                  <span className="status-dot" />
+                  <div><strong>No verified card history available</strong><p>FlowPay has no authenticated card-history endpoint yet. No sample card transactions or card events are shown as real.</p></div>
+                </div>
+                <button className="feature-button" onClick={() => {
+                  setActivityFilter("cards");
+                  setPage("Activity");
+                  window.sessionStorage.setItem("flowpay.currentPage", "Activity");
+                }}>Open card history</button>
+              </section>
             </section>
           ) : page === "Transfers" ? (
             <section className="page-grid transfer-page">
@@ -389,30 +405,41 @@ export default function App() {
               </section>
             </section>
           ) : (
-            <section className="page-grid">
-              <section className="panel activity-panel">
+            <section className="page-grid activity-page">
+              <section className="notice">
+                <div className="notice-icon"><ShieldCheck size={21} /></div>
+                <div>
+                  <strong>History is read-only and not connected yet</strong>
+                  <p>Activity will only show records returned by authenticated, ledger-backed APIs. Card events and transfer records are not fabricated or inferred from dashboard status.</p>
+                </div>
+              </section>
+              <section className="panel activity-history-panel">
                 <div className="panel-heading">
-                  <div><h2>Activity history</h2><p>Account movements from the verified ledger</p></div>
+                  <div><h2>Activity history</h2><p>Filter the history view by activity type</p></div>
                   <Clock3 size={20} />
                 </div>
-                <div className="connection-row">
-                  <span>API connection</span>
-                  <span className={apiStatus === "connected" ? "status-ok" : apiStatus === "checking" ? "status-wait" : "status-error"}>
-                    <span className="status-dot" />{apiStatus === "connected" ? "Connected" : apiStatus === "checking" ? "Checking" : "Unavailable"}
-                  </span>
+                <div className="history-filters" role="group" aria-label="Filter activity history">
+                  <button className={activityFilter === "all" ? "history-filter history-filter-active" : "history-filter"} onClick={() => setActivityFilter("all")}>All activity</button>
+                  <button className={activityFilter === "transfers" ? "history-filter history-filter-active" : "history-filter"} onClick={() => setActivityFilter("transfers")}>Transfers</button>
+                  <button className={activityFilter === "cards" ? "history-filter history-filter-active" : "history-filter"} onClick={() => setActivityFilter("cards")}>Card activity</button>
                 </div>
-                <div className="connection-row">
-                  <span>Database readiness</span>
-                  <span className={databaseStatus === "connected" ? "status-ok" : databaseStatus === "checking" ? "status-wait" : "status-error"}>
-                    <span className="status-dot" />
-                    {databaseStatus === "connected" ? "Connected" : databaseStatus === "checking" ? "Checking" : databaseStatus === "not_configured" ? "Not configured" : "Unavailable"}
-                  </span>
+                <div className="history-readiness-grid">
+                  <div className="history-readiness-item"><span>API connection</span><strong className={apiStatus === "connected" ? "status-ok" : apiStatus === "checking" ? "status-wait" : "status-error"}>{apiStatus === "connected" ? "Connected" : apiStatus === "checking" ? "Checking" : "Unavailable"}</strong></div>
+                  <div className="history-readiness-item"><span>Database readiness</span><strong className={databaseStatus === "connected" ? "status-ok" : databaseStatus === "checking" ? "status-wait" : "status-error"}>{databaseStatus === "connected" ? "Connected" : databaseStatus === "checking" ? "Checking" : databaseStatus === "not_configured" ? "Not configured" : "Unavailable"}</strong></div>
+                  <div className="history-readiness-item"><span>Selected view</span><strong>{activityFilter === "all" ? "All activity" : activityFilter === "transfers" ? "Transfers" : "Card activity"}</strong></div>
                 </div>
-                <button className="refresh-button" onClick={() => { void checkApi(); }}>Refresh connection status</button>
-                <div className="empty-state">
-                  <div className="empty-icon"><Clock3 size={23} /></div>
-                  <strong>No verified activity available</strong>
-                  <span>Activity will appear after account authentication and ledger-backed transaction history are implemented. No sample transactions are shown as real.</span>
+                <div className="history-empty-state">
+                  <div className="empty-icon">{activityFilter === "cards" ? <CreditCard size={23} /> : activityFilter === "transfers" ? <ArrowLeftRight size={23} /> : <Clock3 size={23} />}</div>
+                  <strong>{activityFilter === "cards" ? "No verified card events available" : activityFilter === "transfers" ? "No verified transfer history available" : "No verified activity available"}</strong>
+                  <span>{activityFilter === "cards"
+                    ? "Card issuance, status changes, and card transactions will appear only after an authenticated card-history service is implemented."
+                    : activityFilter === "transfers"
+                      ? "Transfer records will appear only after authenticated transaction-history APIs and ledger reconciliation are implemented."
+                      : "Account, transfer, and card events will appear here when the backend returns verified history. No demo records are presented as real."}</span>
+                </div>
+                <div className="history-footer">
+                  <p>History is currently unavailable because the required customer-scoped history endpoints are not implemented.</p>
+                  <button className="refresh-button" onClick={() => { void checkApi(); }}>Refresh connection status</button>
                 </div>
               </section>
             </section>

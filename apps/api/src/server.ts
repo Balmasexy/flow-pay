@@ -190,8 +190,8 @@ async function handleProtected(req: IncomingMessage, res: ServerResponse, pathna
       }
       const limitRaw = Number(url.searchParams.get("limit") ?? "50");
       const limit = Number.isInteger(limitRaw) ? Math.max(1, Math.min(100, limitRaw)) : 50;
-      const filter = requested === "received" ? "AND e.amount_minor > 0"
-        : requested === "sent" ? "AND e.amount_minor < 0"
+      const filter = requested === "received" ? "AND t.status = 'posted' AND e.amount_minor > 0"
+        : requested === "sent" ? "AND t.status = 'posted' AND e.amount_minor < 0"
         : requested === "transfers" ? "AND t.transaction_type ILIKE '%transfer%'" : "";
       const result = await pool.query(
         `SELECT t.id, t.transaction_type, t.status, t.description, t.created_at,

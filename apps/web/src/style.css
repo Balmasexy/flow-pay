@@ -922,3 +922,27 @@ body { background: var(--dashboard-canvas); }
   .app-shell:has(.native-app-nav) .topbar { padding: 0 14px; }
   .app-shell:has(.native-app-nav) .breadcrumb { font-size: 11px; }
 }
+
+
+/* Dashboard cards should use the warm FlowPay palette instead of plain white */
+.dashboard-stat-grid .stat-card-link {
+  background: linear-gradient(145deg, #fff7ef 0%, #f8efe5 100%);
+  border-color: #eadbca;
+}
+.dashboard-stat-grid .stat-card-link:nth-child(3) {
+  background: linear-gradient(145deg, #f7f1e8 0%, #eee7dc 100%);
+  border-color: #e3d7c8;
+}
+.dashboard-stat-grid .stat-card-link .stat-top svg {
+  background: #ffe4cd;
+}
+.dashboard-quick-actions .quick-action {
+  background: linear-gradient(135deg, #fff7ef 0%, #f5eee5 100%);
+  border-color: #e7d9c9;
+}
+.dashboard-quick-actions .quick-action:nth-child(2) {
+  background: linear-gradient(135deg, #fff5e9 0%, #f2e8dc 100%);
+}
+.dashboard-quick-actions .quick-action:nth-child(3) {
+  background: linear-gradient(135deg, #f7f2e9 0%, #eee8de 100%);
+}

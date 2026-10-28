@@ -15,6 +15,7 @@ export default function App() {
   const [apiMessage, setApiMessage] = useState("Checking API connection…");
   const [page, setPage] = useState<Page>("Overview");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [featureMessage, setFeatureMessage] = useState("Card issuing and controls are not connected to the backend.");
 
   async function checkApi() {
     if (!API_URL) {
@@ -128,7 +129,11 @@ export default function App() {
               <p className="subtitle">
                 {page === "Overview"
                   ? "A clearer view of your financial life starts here."
-                  : "This feature is part of the planned FlowPay experience."}
+                  : page === "Cards"
+                    ? "Explore card tools while secure issuing services are being built."
+                    : page === "Transfers"
+                      ? "Review the transfer workflow and the checks required before it can be enabled."
+                      : "Review verified account activity when ledger-backed history is available."}
               </p>
             </div>
             <button className="refresh-button" onClick={() => void checkApi()}>
@@ -223,27 +228,28 @@ export default function App() {
                 <div><h2>Your cards</h2><p>Card management becomes available after secure issuing services are implemented.</p></div>
                 <span className="preview-label">PREVIEW</span>
               </section>
+              <p className="feature-feedback" role="status">{featureMessage}</p>
               <section className="card-feature-grid">
                 <article className="panel feature-card">
                   <div className="feature-icon"><CreditCard size={24} /></div>
                   <h2>Virtual card</h2>
                   <p>For supported online purchases after card issuance is integrated.</p>
                   <div className="feature-status"><span className="status-dot" /> Not issued</div>
-                  <button className="feature-button" onClick={() => setApiMessage("Card issuance is not available in this preview.")}>Check virtual card</button>
+                  <button className="feature-button" onClick={() => setFeatureMessage("Virtual card issuance is not connected. No card has been created.")}>Check virtual card</button>
                 </article>
                 <article className="panel feature-card">
                   <div className="feature-icon"><Wallet size={24} /></div>
                   <h2>Physical card</h2>
                   <p>Physical card ordering and delivery are not connected to the backend.</p>
                   <div className="feature-status"><span className="status-dot" /> Not issued</div>
-                  <button className="feature-button" onClick={() => setApiMessage("Physical card ordering is not available in this preview.")}>Check physical card</button>
+                  <button className="feature-button" onClick={() => setFeatureMessage("Physical card ordering and delivery are not connected. No order has been placed.")}>Check physical card</button>
                 </article>
                 <article className="panel feature-card">
                   <div className="feature-icon"><ShieldCheck size={24} /></div>
                   <h2>Card security</h2>
                   <p>Freeze, unfreeze, PIN management, and spending limits require verified card services.</p>
                   <div className="feature-status"><span className="status-dot" /> Not connected</div>
-                  <button className="feature-button" onClick={() => setApiMessage("Card security controls are not available until a card service is connected.")}>Check security tools</button>
+                  <button className="feature-button" onClick={() => setFeatureMessage("Freeze, PIN, and spending-limit controls need a verified card service before they can be enabled.")}>Check security tools</button>
                 </article>
               </section>
             </section>

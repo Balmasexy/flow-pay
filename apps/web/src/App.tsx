@@ -78,7 +78,6 @@ export default function App() {
             >
               <Icon size={19} />
               <span>{name}</span>
-              {name !== "Overview" && <span className="coming-soon">Soon</span>}
             </button>
           ))}
         </nav>
@@ -137,6 +136,8 @@ export default function App() {
             </button>
           </div>
 
+          {page === "Overview" ? (
+            <>
           <section className="notice">
             <div className="notice-icon"><ShieldCheck size={21} /></div>
             <div>
@@ -208,6 +209,77 @@ export default function App() {
             </article>
           </section>
 
+            </>
+          ) : page === "Cards" ? (
+            <section className="page-grid">
+              <section className="notice">
+                <div className="notice-icon"><ShieldCheck size={21} /></div>
+                <div>
+                  <strong>Card services are not connected yet</strong>
+                  <p>These card panels are available to explore, but FlowPay has no card-issuing or card-control API yet. No real card is issued or activated from this preview.</p>
+                </div>
+              </section>
+              <section className="section-heading">
+                <div><h2>Your cards</h2><p>Card management becomes available after secure issuing services are implemented.</p></div>
+                <span className="preview-label">PREVIEW</span>
+              </section>
+              <section className="card-feature-grid">
+                <article className="panel feature-card">
+                  <div className="feature-icon"><CreditCard size={24} /></div>
+                  <h2>Virtual card</h2>
+                  <p>For supported online purchases after card issuance is integrated.</p>
+                  <div className="feature-status"><span className="status-dot" /> Not issued</div>
+                  <button className="feature-button" onClick={() => setApiMessage("Card issuance is not available in this preview.")}>Check virtual card</button>
+                </article>
+                <article className="panel feature-card">
+                  <div className="feature-icon"><Wallet size={24} /></div>
+                  <h2>Physical card</h2>
+                  <p>Physical card ordering and delivery are not connected to the backend.</p>
+                  <div className="feature-status"><span className="status-dot" /> Not issued</div>
+                  <button className="feature-button" onClick={() => setApiMessage("Physical card ordering is not available in this preview.")}>Check physical card</button>
+                </article>
+                <article className="panel feature-card">
+                  <div className="feature-icon"><ShieldCheck size={24} /></div>
+                  <h2>Card security</h2>
+                  <p>Freeze, unfreeze, PIN management, and spending limits require verified card services.</p>
+                  <div className="feature-status"><span className="status-dot" /> Not connected</div>
+                  <button className="feature-button" onClick={() => setApiMessage("Card security controls are not available until a card service is connected.")}>Check security tools</button>
+                </article>
+              </section>
+            </section>
+          ) : page === "Transfers" ? (
+            <section className="page-grid">
+              <section className="notice">
+                <div className="notice-icon"><ShieldCheck size={21} /></div>
+                <div>
+                  <strong>Transfers are safely disabled</strong>
+                  <p>The current API exposes health and readiness endpoints only. No transfer can be submitted, and no balance is changed by this preview.</p>
+                </div>
+              </section>
+              <section className="panel feature-card">
+                <div className="feature-icon"><ArrowLeftRight size={24} /></div>
+                <h2>Transfer workflow</h2>
+                <p>Before transfers can be enabled, FlowPay needs authenticated accounts, server-side double-entry posting, idempotency, limits, and audit events.</p>
+                <div className="connection-row"><span>Account authentication</span><span className="status-wait">Not implemented</span></div>
+                <div className="connection-row"><span>Ledger posting</span><span className="status-wait">Validation required</span></div>
+                <div className="connection-row"><span>Live transfers</span><span className="status-wait">Disabled</span></div>
+              </section>
+            </section>
+          ) : (
+            <section className="page-grid">
+              <section className="panel activity-panel">
+                <div className="panel-heading">
+                  <div><h2>Activity history</h2><p>Account movements from the verified ledger</p></div>
+                  <Clock3 size={20} />
+                </div>
+                <div className="empty-state">
+                  <div className="empty-icon"><Clock3 size={23} /></div>
+                  <strong>No verified activity available</strong>
+                  <span>Activity will appear after account authentication and ledger-backed transaction history are implemented. No sample transactions are shown as real.</span>
+                </div>
+              </section>
+            </section>
+          )}
           <footer>
             <span>© {new Date().getFullYear()} FlowPay</span>
             <span>Independent product · Development preview</span>

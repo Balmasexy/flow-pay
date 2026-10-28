@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import PasskeySecurity from "./PasskeySecurity";
 import {
   ArrowDownLeft, ArrowLeftRight, ArrowRight, ArrowUpRight, Bell,
   CheckCircle2, CircleHelp, Clock3, CreditCard, Home,
@@ -11,7 +12,7 @@ const AUTH_URL = (import.meta.env.VITE_NEON_AUTH_URL || "").replace(/\/$/, "");
 
 type ApiStatus = "checking" | "connected" | "unavailable";
 type DatabaseStatus = "checking" | "connected" | "unavailable" | "not_configured" | "schema_incomplete";
-type Page = "Overview" | "Transfers" | "Cards" | "Activity" | "Money Received" | "Money Sent" | "Customer Profile" | "View Account Number";
+type Page = "Overview" | "Transfers" | "Cards" | "Activity" | "Money Received" | "Money Sent" | "Customer Profile" | "View Account Number" | "Security";
 type ActivityFilter = "all" | "received" | "sent" | "transfers" | "cards";
 type CustomerProfile = { id: string; email: string | null; status: string; created_at: string };
 type Account = { id: string; currency: string; status: string; ledger_balance_minor: string };
@@ -212,7 +213,7 @@ export default function App() {
     const savedPage = window.sessionStorage.getItem("flowpay.currentPage");
     return savedPage === "Transfers" || savedPage === "Cards" || savedPage === "Activity" ||
       savedPage === "Money Received" || savedPage === "Money Sent" || savedPage === "Customer Profile" ||
-      savedPage === "View Account Number"
+      savedPage === "View Account Number" || savedPage === "Security"
       ? savedPage
       : "Overview";
   });
@@ -388,7 +389,8 @@ export default function App() {
     { name: "Cards" as const, icon: CreditCard },
     { name: "Activity" as const, icon: Clock3 },
     { name: "Customer Profile" as const, icon: UserRound },
-    { name: "View Account Number" as const, icon: Eye }
+    { name: "View Account Number" as const, icon: Eye },
+    { name: "Security" as const, icon: ShieldCheck }
   ];
 
   const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
@@ -742,6 +744,18 @@ export default function App() {
                   <p>There is no active transfer endpoint in this API. The control below is intentionally disabled; no real transfer can be initiated from this screen.</p>
                 </div>
                 <button className="feature-button transfer-disabled-button" disabled aria-disabled="true">Transfers not available</button>
+              </section>
+            </section>
+          ) : page === "Security" ? (
+            <section className="page-grid profile-page">
+              <section className="notice">
+                <div className="notice-icon"><ShieldCheck size={21} /></div>
+                <div><strong>Account security</strong><p>Passkeys add a cryptographic verification step to your existing signed-in account. Email/password login remains available. Passkeys here do not yet replace Neon Auth sign-in.</p></div>
+              </section>
+              <PasskeySecurity apiUrl={API_URL} getAccessToken={getAccessToken} />
+              <section className="notice">
+                <div className="notice-icon"><LockKeyhole size={21} /></div>
+                <div><strong>Face-liveness verification is not active yet</strong><p>FlowPay will not claim face verification until a provider is configured, server callbacks are verified, and the provider's face match is tied to your own enrolled identity. No universal master face is used.</p></div>
               </section>
             </section>
           ) : page === "Customer Profile" ? (

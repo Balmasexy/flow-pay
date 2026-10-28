@@ -391,7 +391,10 @@ export default function App() {
     { name: "View Account Number" as const, icon: Eye }
   ];
 
-  const pathname = window.location.pathname.replace(/\\/+$/, "") || "/";\n  if (pathname === "/") return <LandingPage />;\n  if (pathname === "/login" || pathname === "/signin") return <AuthPage mode="login" />;\n  if (pathname === "/signup" || pathname === "/register" || pathname === "/registration") return <AuthPage mode="signup" />;
+  const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
+  if (pathname === "/") return <LandingPage />;
+  if (pathname === "/login" || pathname === "/signin") return <AuthPage mode="login" />;
+  if (pathname === "/signup" || pathname === "/register" || pathname === "/registration") return <AuthPage mode="signup" />;
 
   return (
     <div className="app-shell">

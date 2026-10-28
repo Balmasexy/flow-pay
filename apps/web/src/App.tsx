@@ -306,10 +306,10 @@ export default function App() {
           </button>}
           <div className="breadcrumb">Workspace <span>/</span> <strong>{page}</strong></div>
           <div className="topbar-right">
-            <span className={`api-indicator api-${apiStatus}`}>
+            {page !== "Overview" && <span className={`api-indicator api-${apiStatus}`}>
               <span className="status-dot" />
               {apiMessage}
-            </span>
+            </span>}
             <button className="icon-button notification-button" aria-label="Notifications">
               <Bell size={19} />
             </button>
@@ -355,32 +355,23 @@ export default function App() {
                               : "Review verified account activity when ledger-backed history is available."}
               </p>
             </div>
-            <button
+            {page !== "Overview" && <button
               className="refresh-button"
               onClick={() => { void checkApi(); }}
               aria-label="Refresh FlowPay"
               title="Refresh API and database connection status without reloading the page"
             >
               <RefreshCw size={16} /> Refresh
-            </button>
+            </button>}
           </div>
 
           {page === "Overview" ? (
             <>
-          <section className="notice">
-            <div className="notice-icon"><ShieldCheck size={21} /></div>
-            <div>
-              <strong>Development preview</strong>
-              <p>FlowPay now checks the live API health and database-readiness endpoints. Account balances, cards, and transaction history remain hidden until authenticated, ledger-backed services are implemented.</p>
-            </div>
-          </section>
-
           <section className="section-heading dashboard-section-heading">
             <div>
               <h2>Account overview</h2>
-              <p>Live financial figures will appear only after they can be loaded from authenticated account services.</p>
+              <p>Your account at a glance.</p>
             </div>
-            <span className="preview-label">PREVIEW</span>
           </section>
 
           <section className="stat-grid dashboard-stat-grid">
@@ -434,35 +425,8 @@ export default function App() {
               </div> : <div className="empty-state">
                 <div className="empty-icon"><ArrowLeftRight size={23} /></div>
                 <strong>{customerLoading ? "Loading verified activity…" : "No verified activity available"}</strong>
-                <span>{customerMessage}</span>
+                <span>{customerLoading ? "Checking for recent activity…" : "Your recent transactions will appear here when available."}</span>
               </div>}
-            </article>
-
-            <article className="panel connection-panel">
-              <div className="panel-heading">
-                <div><h2>System status</h2><p>Frontend to backend connectivity</p></div>
-                <CheckCircle2 size={20} />
-              </div>
-              <div className="connection-row">
-                <span>Customer interface</span><span className="status-ok"><CheckCircle2 size={15} /> Running</span>
-              </div>
-              <div className="connection-row">
-                <span>API health endpoint</span>
-                <span className={apiStatus === "connected" ? "status-ok" : apiStatus === "checking" ? "status-wait" : "status-error"}>
-                  <span className="status-dot" />{apiStatus === "connected" ? "Connected" : apiStatus === "checking" ? "Checking" : "Unavailable"}
-                </span>
-              </div>
-              <div className="connection-row">
-                <span>Database readiness{databaseName ? ` (${databaseName})` : ""}</span>
-                <span className={databaseStatus === "connected" ? "status-ok" : databaseStatus === "checking" ? "status-wait" : "status-error"}>
-                  <span className="status-dot" />
-                  {databaseStatus === "connected" ? "Connected" : databaseStatus === "checking" ? "Checking" : databaseStatus === "not_configured" ? "Not configured" : databaseStatus === "schema_incomplete" ? "Schema incomplete" : "Unavailable"}
-                </span>
-              </div>
-              <div className="connection-row">
-                <span>Payments</span><span className="status-wait">Disabled</span>
-              </div>
-              <p className="connection-help">API status comes from <code>/health</code>; database and required schema migrations are checked by <code>/ready</code>. “Schema incomplete” means a required migration is missing; migrations are never applied automatically. A connected database does not mean payment features are enabled.</p>
             </article>
           </section>
 
@@ -765,7 +729,7 @@ export default function App() {
           )}
           <footer>
             <span>© {new Date().getFullYear()} FlowPay</span>
-            <span>Independent product · Development preview</span>
+            {page !== "Overview" && <span>Independent product</span>}
           </footer>
         </div>
       </main>

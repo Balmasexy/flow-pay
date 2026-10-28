@@ -310,6 +310,28 @@ export default function App() {
                   <button className="feature-button" onClick={() => setFeatureMessage("Freeze, PIN, and spending-limit controls need a verified card service before they can be enabled.")}>Check security tools</button>
                 </article>
               </section>
+              <section className="panel card-lifecycle">
+                <div className="panel-heading">
+                  <div><h2>Card lifecycle</h2><p>What must be verified before a real card is usable</p></div>
+                  <ShieldCheck size={20} />
+                </div>
+                <div className="card-lifecycle-row">
+                  <span className="lifecycle-number">1</span>
+                  <div><strong>Secure card provider</strong><p>Connect a verified issuing provider and keep provider secrets on the server.</p></div>
+                  <span className="workflow-status">Not connected</span>
+                </div>
+                <div className="card-lifecycle-row">
+                  <span className="lifecycle-number">2</span>
+                  <div><strong>Authenticate cardholder</strong><p>Require an authenticated customer session and confirm ownership of the card.</p></div>
+                  <span className="workflow-status">Not implemented</span>
+                </div>
+                <div className="card-lifecycle-row">
+                  <span className="lifecycle-number">3</span>
+                  <div><strong>Audit every control</strong><p>Verify freeze, unfreeze, PIN, limits, and status changes through server-side authorization.</p></div>
+                  <span className="workflow-status">Not implemented</span>
+                </div>
+                <p className="connection-help">The buttons above only explain feature readiness. They do not issue, activate, freeze, or modify a real card.</p>
+              </section>
             </section>
           ) : page === "Transfers" ? (
             <section className="page-grid transfer-page">

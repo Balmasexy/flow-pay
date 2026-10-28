@@ -1,6 +1,7 @@
 import { createPublicKey, verify as verifySignature } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { Pool } from "pg";
+import { handlePasskeyRoute } from "./passkeys.js";
 
 const port = Number(process.env.PORT ?? 3000);
 const databaseUrl = process.env.DATABASE_URL?.trim();
@@ -282,7 +283,7 @@ const server = createServer(async (req, res) => {
     return;
   }
   if (req.method === "GET" && pathname === "/ready") {
-    const requiredMigrations = ["001_core", "002_ledger_invariants", "003_customer_profile_cards"];
+    const requiredMigrations = ["001_core", "002_ledger_invariants", "003_customer_profile_cards", "004_passkeys_security"];
     if (!pool) {
       sendJson(res, 503, { service: "flowpay-api", status: "not_ready", database: "not_configured", schema: "unknown", payments: "disabled" });
       return;
@@ -336,6 +337,26 @@ const server = createServer(async (req, res) => {
         missing_migrations: requiredMigrations, payments: "disabled"
       });
     }
+    return;
+  }
+  if (pathname.startsWith("/v1/me/passkeys")) {
+    if (req.method === "OPTIONS") { res.writeHead(204); res.end(); return; }
+    const auth = await authenticate(req);
+    if ("error" in auth) { authError(res, auth.error); return; }
+    if (!pool) { sendJson(res, 503, { error: "DATABASE_NOT_CONFIGURED" }); return; }
+    let customer: Customer | null;
+    try {
+      customer = await getCustomer(auth.subject);
+    } catch (error) {
+      if (error instanceof Error && error.message === "CUSTOMER_PROFILE_INACTIVE") {
+        sendJson(res, 403, { error: "CUSTOMER_PROFILE_INACTIVE" });
+      } else {
+        sendJson(res, 503, { error: "CUSTOMER_DATA_UNAVAILABLE" });
+      }
+      return;
+    }
+    if (!customer) { sendJson(res, 404, { error: "CUSTOMER_PROFILE_NOT_FOUND" }); return; }
+    await handlePasskeyRoute(req, res, pool, customer, pathname);
     return;
   }
   if (pathname.startsWith("/v1/me/")) {

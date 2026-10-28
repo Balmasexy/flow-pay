@@ -385,3 +385,33 @@ footer { border-top: 1px solid #eaeae6; margin-top: 18px; }
   .card-lifecycle-row > div { flex-basis: calc(100% - 50px); }
   .card-lifecycle-row .workflow-status { margin-left: 43px; }
 }
+
+
+/* Read-only activity and card-history workflow */
+.card-history-panel { width: 100%; }
+.card-history-status { display: flex; align-items: flex-start; gap: 12px; padding: 18px 0; margin-top: 8px; }
+.card-history-status > .status-dot { flex: 0 0 8px; margin-top: 5px; background: #d39b31; }
+.card-history-status > div { min-width: 0; }
+.card-history-status strong { display: block; font-size: 12px; }
+.card-history-status p { margin-top: 6px; color: #858780; font-size: 11px; line-height: 1.7; }
+.card-history-panel > .feature-button { min-height: 40px; }
+.activity-history-panel { width: 100%; }
+.history-filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 16px; }
+.history-filter { min-height: 38px; border: 1px solid var(--border); border-radius: 8px; background: #fff; color: #666760; padding: 8px 13px; font-size: 11px; font-weight: 600; }
+.history-filter:hover { border-color: #ffc08f; }
+.history-filter-active { border-color: var(--orange); background: #fff3e8; color: #a94e09; }
+.history-readiness-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.history-readiness-item { display: grid; gap: 8px; min-width: 0; padding: 13px; border: 1px solid var(--border); border-radius: 9px; background: #fcfcfa; }
+.history-readiness-item span { color: #858780; font-size: 10px; }
+.history-readiness-item strong { font-size: 11px; overflow-wrap: anywhere; }
+.history-empty-state { display: flex; align-items: center; flex-direction: column; text-align: center; justify-content: center; min-height: 210px; padding: 28px 15px; }
+.history-empty-state strong { font-size: 12px; }
+.history-empty-state span { max-width: 430px; margin-top: 8px; color: #858780; font-size: 11px; line-height: 1.8; }
+.history-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 15px; border-top: 1px solid #f0f0ed; }
+.history-footer p { color: #999a94; font-size: 10px; line-height: 1.7; }
+@media (max-width: 700px) {
+  .history-readiness-grid { grid-template-columns: 1fr; }
+  .history-footer { align-items: stretch; flex-direction: column; }
+  .history-footer .refresh-button { width: 100%; justify-content: center; }
+  .history-filter { flex: 1 1 auto; }
+}

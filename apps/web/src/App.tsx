@@ -60,6 +60,8 @@ function formatDate(value: string): string {
 }
 
 export default function App() {
+  const isNativeApp = typeof window !== "undefined" &&
+    Boolean((window as Window & { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.());
   const [apiStatus, setApiStatus] = useState<ApiStatus>("checking");
   const [apiMessage, setApiMessage] = useState("Checking API connection…");
   const [databaseStatus, setDatabaseStatus] = useState<DatabaseStatus>("checking");
@@ -249,7 +251,7 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <aside className={`sidebar ${menuOpen ? "sidebar-open" : ""}`}>
+      {!isNativeApp && <aside className={`sidebar ${menuOpen ? "sidebar-open" : ""}`}>
         <div className="brand">
           <span className="brand-mark">F</span>
           <span>flow<span className="brand-accent">pay</span></span>
@@ -293,15 +295,15 @@ export default function App() {
             <CircleHelp size={18} className="muted-icon" />
           </div>
         </div>
-      </aside>
+      </aside>}
 
-      {menuOpen && <button className="scrim" aria-label="Close navigation" onClick={() => setMenuOpen(false)} />}
+      {!isNativeApp && menuOpen && <button className="scrim" aria-label="Close navigation" onClick={() => setMenuOpen(false)} />}
 
       <main className="main">
         <header className="topbar">
-          <button className="icon-button mobile-menu" onClick={() => setMenuOpen(true)} aria-label="Open menu">
+          {!isNativeApp && <button className="icon-button mobile-menu" onClick={() => setMenuOpen(true)} aria-label="Open menu">
             <Menu size={22} />
-          </button>
+          </button>}
           <div className="breadcrumb">Workspace <span>/</span> <strong>{page}</strong></div>
           <div className="topbar-right">
             <span className={`api-indicator api-${apiStatus}`}>
@@ -313,6 +315,22 @@ export default function App() {
             </button>
           </div>
         </header>
+
+        {isNativeApp && <nav className="native-app-nav" aria-label="App navigation">
+          {nav.map(({ name, icon: Icon }) => (
+            <button
+              key={name}
+              className={`native-app-nav-item ${page === name ? "native-app-nav-active" : ""}`}
+              onClick={() => {
+                setPage(name);
+                window.sessionStorage.setItem("flowpay.currentPage", name);
+              }}
+            >
+              <Icon size={18} />
+              <span>{name}</span>
+            </button>
+          ))}
+        </nav>}
 
         <div className="content">
           <div className="welcome-row">

@@ -357,7 +357,7 @@ export default function App() {
             </div>
           </section>
 
-          <section className="section-heading">
+          <section className="section-heading dashboard-section-heading">
             <div>
               <h2>Account overview</h2>
               <p>Live financial figures will appear only after they can be loaded from authenticated account services.</p>
@@ -365,7 +365,7 @@ export default function App() {
             <span className="preview-label">PREVIEW</span>
           </section>
 
-          <section className="stat-grid">
+          <section className="stat-grid dashboard-stat-grid">
             <article className="stat-card balance-card">
               <div className="stat-top"><span>Available balance</span><Wallet size={19} /></div>
               <div className="balance-value">{summaryTotals.length ? summaryTotals.map((total) => formatMinor(total.net_balance_minor, total.currency)).join(" · ") : "Not available"}</div>
@@ -383,7 +383,7 @@ export default function App() {
             </article>
           </section>
 
-          <section className="quick-actions" aria-label="Quick navigation">
+          <section className="quick-actions dashboard-quick-actions" aria-label="Quick navigation">
             <button className="quick-action" onClick={() => { setPage("Transfers"); window.sessionStorage.setItem("flowpay.currentPage", "Transfers"); }}>
               <span className="quick-action-icon"><ArrowLeftRight size={19} /></span>
               <span><strong>Transfers</strong><small>Review secure transfer setup</small></span>
@@ -401,7 +401,7 @@ export default function App() {
             </button>
           </section>
 
-          <section className="lower-grid">
+          <section className="lower-grid dashboard-lower-grid">
             <article className="panel activity-panel">
               <div className="panel-heading">
                 <div><h2>Recent activity</h2><p>Latest records from the authenticated ledger</p></div>

@@ -878,49 +878,47 @@ body { background: var(--dashboard-canvas); }
 
 
 /* Platform-specific navigation: sidebar on web, scrollable app navigation in Capacitor APK */
-.native-app-nav { display: none; }
+.native-app-nav {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  overflow-x: auto;
+  padding: 10px 14px;
+  background: #fbfaf8;
+  border-bottom: 1px solid #e7e3dc;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.native-app-nav::-webkit-scrollbar { display: none; }
+.native-app-nav-item {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: #62635e;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.native-app-nav-item svg { color: #9a9b94; }
+.native-app-nav-item.native-app-nav-active {
+  background: #fff0e4;
+  border-color: #ffd7b8;
+  color: #a94f0a;
+  font-weight: 700;
+}
+.native-app-nav-item.native-app-nav-active svg { color: var(--orange); }
 @media (max-width: 700px) {
   .app-shell:has(.native-app-nav) .sidebar { display: none !important; }
   .app-shell:has(.native-app-nav) .main { margin-left: 0; }
   .app-shell:has(.native-app-nav) .mobile-menu,
   .app-shell:has(.native-app-nav) .mobile-close,
   .app-shell:has(.native-app-nav) .scrim { display: none !important; }
-  .app-shell:has(.native-app-nav) .native-app-nav {
-    display: flex;
-    position: sticky;
-    top: 0;
-    z-index: 8;
-    gap: 7px;
-    overflow-x: auto;
-    padding: 10px 12px;
-    background: #fbfaf8;
-    border-bottom: 1px solid #e7e3dc;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-  }
-  .app-shell:has(.native-app-nav) .native-app-nav::-webkit-scrollbar { display: none; }
-  .native-app-nav-item {
-    display: flex;
-    flex: 0 0 auto;
-    align-items: center;
-    gap: 7px;
-    min-height: 40px;
-    padding: 0 12px;
-    border: 1px solid transparent;
-    border-radius: 10px;
-    background: transparent;
-    color: #62635e;
-    font-size: 11px;
-    white-space: nowrap;
-  }
-  .native-app-nav-item svg { color: #9a9b94; }
-  .native-app-nav-item.native-app-nav-active {
-    background: #fff0e4;
-    border-color: #ffd7b8;
-    color: #a94f0a;
-    font-weight: 700;
-  }
-  .native-app-nav-item.native-app-nav-active svg { color: var(--orange); }
+  .app-shell:has(.native-app-nav) .native-app-nav { position: sticky; top: 0; z-index: 8; padding: 10px 12px; }
   .app-shell:has(.native-app-nav) .topbar { padding: 0 14px; }
   .app-shell:has(.native-app-nav) .breadcrumb { font-size: 11px; }
 }

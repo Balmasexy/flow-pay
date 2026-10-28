@@ -1,0 +1,146 @@
+name: FlowPay CI and Android APK
+
+on:
+  push:
+    branches:
+      - feat/api-foundation
+    paths:
+      - "apps/**"
+      - ".github/workflows/**"
+      - "README.md"
+      - "IMPLEMENTATION_PLAN.md"
+  pull_request:
+    branches:
+      - feat/api-foundation
+    paths:
+      - "apps/**"
+      - ".github/workflows/**"
+      - "README.md"
+      - "IMPLEMENTATION_PLAN.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flowpay-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-and-build-android:
+    name: Verify API and web; build debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            apps/api/package-lock.json
+            apps/web/package-lock.json
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Verify runner Android SDK and install required packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${ANDROID_HOME:?GitHub runner Android SDK path is missing}"
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
+          test -x "$SDKMANAGER"
+          set +o pipefail
+          yes | "$SDKMANAGER" --licenses >/dev/null
+          set -o pipefail
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install API dependencies
+        run: npm ci --prefix apps/api
+
+      - name: Type-check API
+        run: npm run typecheck --prefix apps/api
+
+      - name: Smoke-test API health and safe readiness behavior
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run start --prefix apps/api > "$RUNNER_TEMP/flowpay-api.log" 2>&1 &
+          api_pid=$!
+          cleanup() {
+            kill "$api_pid" 2>/dev/null || true
+            wait "$api_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          ready=0
+          for attempt in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:3000/health > "$RUNNER_TEMP/flowpay-health.json"; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            cat "$RUNNER_TEMP/flowpay-api.log"
+            echo "API health endpoint did not become available" >&2
+            exit 1
+          fi
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const health = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + "/flowpay-health.json", "utf8"));
+            if (health.service !== "flowpay-api" || health.status !== "ok") {
+              throw new Error("Unexpected /health response: " + JSON.stringify(health));
+            }
+          '
+          ready_status="$(curl --silent --output "$RUNNER_TEMP/flowpay-ready.json" --write-out "%{http_code}" http://127.0.0.1:3000/ready)"
+          if [ "$ready_status" != "503" ]; then
+            cat "$RUNNER_TEMP/flowpay-ready.json"
+            echo "Expected /ready to return 503 when DATABASE_URL is not configured; got $ready_status" >&2
+            exit 1
+          fi
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const readiness = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + "/flowpay-ready.json", "utf8"));
+            if (readiness.database !== "not_configured" || readiness.payments !== "disabled") {
+              throw new Error("Unsafe or unexpected /ready response: " + JSON.stringify(readiness));
+            }
+          '
+
+      - name: Install web dependencies
+        run: npm ci --prefix apps/web
+
+      - name: Build web app
+        run: npm run build --prefix apps/web
+        env:
+          VITE_API_BASE_URL: https://flowpay-backend-qz79.onrender.com
+
+      - name: Install pinned Capacitor tooling without changing the lockfile
+        run: npm install --prefix apps/web --no-save --package-lock=false @capacitor/core@8.5.3 @capacitor/android@8.5.3 @capacitor/cli@8.5.3
+
+      - name: Generate Android project
+        working-directory: apps/web
+        run: npx cap add android
+
+      - name: Sync web assets to Android
+        working-directory: apps/web
+        run: npx cap sync android
+
+      - name: Build debug APK
+        working-directory: apps/web/android
+        run: ./gradlew assembleDebug
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: flowpay-debug-apk
+          path: apps/web/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7

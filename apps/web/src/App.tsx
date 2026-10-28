@@ -5,7 +5,7 @@ import {
   Menu, RefreshCw, ShieldCheck, Wallet, X
 } from "lucide-react";
 
-const API_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+const API_URL = (import.meta.env.VITE_API_BASE_URL || "https://flowpay-backend-qz79.onrender.com").replace(/\/$/, "");
 
 type ApiStatus = "checking" | "connected" | "unavailable";
 type DatabaseStatus = "checking" | "connected" | "unavailable" | "not_configured";
@@ -339,6 +339,20 @@ export default function App() {
                   <div><h2>Activity history</h2><p>Account movements from the verified ledger</p></div>
                   <Clock3 size={20} />
                 </div>
+                <div className="connection-row">
+                  <span>API connection</span>
+                  <span className={apiStatus === "connected" ? "status-ok" : apiStatus === "checking" ? "status-wait" : "status-error"}>
+                    <span className="status-dot" />{apiStatus === "connected" ? "Connected" : apiStatus === "checking" ? "Checking" : "Unavailable"}
+                  </span>
+                </div>
+                <div className="connection-row">
+                  <span>Database readiness</span>
+                  <span className={databaseStatus === "connected" ? "status-ok" : databaseStatus === "checking" ? "status-wait" : "status-error"}>
+                    <span className="status-dot" />
+                    {databaseStatus === "connected" ? "Connected" : databaseStatus === "checking" ? "Checking" : databaseStatus === "not_configured" ? "Not configured" : "Unavailable"}
+                  </span>
+                </div>
+                <button className="refresh-button" onClick={() => { void checkApi(); }}>Refresh connection status</button>
                 <div className="empty-state">
                   <div className="empty-icon"><Clock3 size={23} /></div>
                   <strong>No verified activity available</strong>

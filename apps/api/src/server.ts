@@ -18,7 +18,7 @@ pool?.on("error", (error) => {
 });
 
 const allowedOrigins = new Set(
-  [process.env.WEB_ORIGIN, "http://localhost:5173"].filter(
+  [process.env.WEB_ORIGIN, "http://localhost:5173", "https://localhost"].filter(
     (origin): origin is string => Boolean(origin)
   )
 );

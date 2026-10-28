@@ -282,13 +282,59 @@ const server = createServer(async (req, res) => {
     return;
   }
   if (req.method === "GET" && pathname === "/ready") {
-    if (!pool) { sendJson(res, 503, { service: "flowpay-api", status: "not_ready", database: "not_configured", payments: "disabled" }); return; }
+    const requiredMigrations = ["001_core", "002_ledger_invariants", "003_customer_profile_cards"];
+    if (!pool) {
+      sendJson(res, 503, { service: "flowpay-api", status: "not_ready", database: "not_configured", schema: "unknown", payments: "disabled" });
+      return;
+    }
+    let databaseName: string | undefined;
     try {
-      const result = await pool.query<{ database_name: string }>("SELECT current_database() AS database_name");
-      sendJson(res, 200, { service: "flowpay-api", status: "ready", database: "connected", database_name: result.rows[0]?.database_name, payments: "disabled" });
+      const databaseResult = await pool.query<{ database_name: string }>("SELECT current_database() AS database_name");
+      databaseName = databaseResult.rows[0]?.database_name;
     } catch (error) {
       console.error("FlowPay readiness database check failed:", error instanceof Error ? error.message : "unknown database error");
-      sendJson(res, 503, { service: "flowpay-api", status: "not_ready", database: "unavailable", payments: "disabled" });
+      sendJson(res, 503, { service: "flowpay-api", status: "not_ready", database: "unavailable", schema: "unknown", payments: "disabled" });
+      return;
+    }
+
+    try {
+      const migrationTable = await pool.query<{ exists: boolean }>(
+        "SELECT to_regclass('public.schema_migrations') IS NOT NULL AS exists"
+      );
+      if (!migrationTable.rows[0]?.exists) {
+        sendJson(res, 503, {
+          service: "flowpay-api", status: "not_ready", database: "connected", schema: "incomplete",
+          database_name: databaseName, required_migrations: requiredMigrations,
+          missing_migrations: requiredMigrations, payments: "disabled"
+        });
+        return;
+      }
+      const migrationResult = await pool.query<{ version: string }>(
+        "SELECT version FROM schema_migrations WHERE version = ANY($1::text[])",
+        [requiredMigrations]
+      );
+      const applied = new Set(migrationResult.rows.map((row) => row.version));
+      const missingMigrations = requiredMigrations.filter((version) => !applied.has(version));
+      if (missingMigrations.length > 0) {
+        sendJson(res, 503, {
+          service: "flowpay-api", status: "not_ready", database: "connected", schema: "incomplete",
+          database_name: databaseName, required_migrations: requiredMigrations,
+          missing_migrations: missingMigrations, payments: "disabled"
+        });
+        return;
+      }
+      sendJson(res, 200, {
+        service: "flowpay-api", status: "ready", database: "connected", schema: "complete",
+        database_name: databaseName, required_migrations: requiredMigrations,
+        missing_migrations: [], payments: "disabled"
+      });
+    } catch (error) {
+      console.error("FlowPay readiness schema check failed:", error instanceof Error ? error.message : "unknown schema error");
+      sendJson(res, 503, {
+        service: "flowpay-api", status: "not_ready", database: "connected", schema: "unavailable",
+        database_name: databaseName, required_migrations: requiredMigrations,
+        missing_migrations: requiredMigrations, payments: "disabled"
+      });
     }
     return;
   }

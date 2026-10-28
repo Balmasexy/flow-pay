@@ -9,7 +9,7 @@ const API_URL = (import.meta.env.VITE_API_BASE_URL || "https://flowpay-backend-q
 const AUTH_URL = (import.meta.env.VITE_NEON_AUTH_URL || "").replace(/\/$/, "");
 
 type ApiStatus = "checking" | "connected" | "unavailable";
-type DatabaseStatus = "checking" | "connected" | "unavailable" | "not_configured";
+type DatabaseStatus = "checking" | "connected" | "unavailable" | "not_configured" | "schema_incomplete";
 type Page = "Overview" | "Transfers" | "Cards" | "Activity" | "Money Received" | "Money Sent" | "Customer Profile";
 type ActivityFilter = "all" | "received" | "sent" | "transfers" | "cards";
 type CustomerProfile = { id: string; email: string | null; status: string; created_at: string };
@@ -116,12 +116,18 @@ export default function App() {
       const response = await fetch(`${API_URL}/ready`, {
         headers: { Accept: "application/json" }
       });
-      const readiness: { status?: string; database?: string; database_name?: string } = await response.json();
-      if (response.ok && readiness.status === "ready" && readiness.database === "connected") {
+      const readiness: { status?: string; database?: string; database_name?: string; schema?: string } = await response.json();
+      if (response.ok && readiness.status === "ready" && readiness.database === "connected" && readiness.schema === "complete") {
         setDatabaseStatus("connected");
         setDatabaseName(readiness.database_name ?? null);
+      } else if (readiness.database === "not_configured") {
+        setDatabaseStatus("not_configured");
+        setDatabaseName(null);
+      } else if (readiness.database === "connected" && readiness.schema !== "complete") {
+        setDatabaseStatus("schema_incomplete");
+        setDatabaseName(readiness.database_name ?? null);
       } else {
-        setDatabaseStatus(readiness.database === "not_configured" ? "not_configured" : "unavailable");
+        setDatabaseStatus("unavailable");
         setDatabaseName(null);
       }
     } catch {
@@ -425,13 +431,13 @@ export default function App() {
                 <span>Database readiness{databaseName ? ` (${databaseName})` : ""}</span>
                 <span className={databaseStatus === "connected" ? "status-ok" : databaseStatus === "checking" ? "status-wait" : "status-error"}>
                   <span className="status-dot" />
-                  {databaseStatus === "connected" ? "Connected" : databaseStatus === "checking" ? "Checking" : databaseStatus === "not_configured" ? "Not configured" : "Unavailable"}
+                  {databaseStatus === "connected" ? "Connected" : databaseStatus === "checking" ? "Checking" : databaseStatus === "not_configured" ? "Not configured" : databaseStatus === "schema_incomplete" ? "Schema incomplete" : "Unavailable"}
                 </span>
               </div>
               <div className="connection-row">
                 <span>Payments</span><span className="status-wait">Disabled</span>
               </div>
-              <p className="connection-help">API status comes from <code>/health</code>; database status comes from <code>/ready</code>. A connected database does not mean account, balance, or payment features are implemented.</p>
+              <p className="connection-help">API status comes from <code>/health</code>; database and required schema migrations are checked by <code>/ready</code>. “Schema incomplete” means a required migration is missing; migrations are never applied automatically. A connected database does not mean payment features are enabled.</p>
             </article>
           </section>
 
@@ -648,7 +654,7 @@ export default function App() {
                 </div>
                 <div className="history-readiness-grid">
                   <div className="history-readiness-item"><span>API connection</span><strong className={apiStatus === "connected" ? "status-ok" : apiStatus === "checking" ? "status-wait" : "status-error"}>{apiStatus === "connected" ? "Connected" : apiStatus === "checking" ? "Checking" : "Unavailable"}</strong></div>
-                  <div className="history-readiness-item"><span>Database readiness</span><strong className={databaseStatus === "connected" ? "status-ok" : databaseStatus === "checking" ? "status-wait" : "status-error"}>{databaseStatus === "connected" ? "Connected" : databaseStatus === "checking" ? "Checking" : databaseStatus === "not_configured" ? "Not configured" : "Unavailable"}</strong></div>
+                  <div className="history-readiness-item"><span>Database readiness</span><strong className={databaseStatus === "connected" ? "status-ok" : databaseStatus === "checking" ? "status-wait" : "status-error"}>{databaseStatus === "connected" ? "Connected" : databaseStatus === "checking" ? "Checking" : databaseStatus === "not_configured" ? "Not configured" : databaseStatus === "schema_incomplete" ? "Schema incomplete" : "Unavailable"}</strong></div>
                   <div className="history-readiness-item"><span>Selected view</span><strong>{activityFilter === "all" ? "All activity" : activityFilter === "transfers" ? "Transfers" : "Card activity"}</strong></div>
                 </div>
                 <div className="history-empty-state">

@@ -59,6 +59,61 @@ function formatDate(value: string): string {
   return Number.isNaN(date.getTime()) ? "Date unavailable" : date.toLocaleString();
 }
 
+
+function LandingPage() {
+  return (
+    <div className="landing-shell">
+      <header className="landing-nav">
+        <a className="landing-brand" href="/" aria-label="FlowPay home"><span className="landing-brand-mark">F</span><span>flow<span>pay</span></span></a>
+        <nav className="landing-links" aria-label="Main navigation">
+          <a href="#features">Features</a><a href="#security">Security</a><a href="#about">About</a>
+        </nav>
+        <div className="landing-nav-actions"><a className="landing-signin" href="/app">Sign in</a><a className="landing-cta" href="/app">Open FlowPay <ArrowRight size={16} /></a></div>
+      </header>
+
+      <main>
+        <section className="landing-hero">
+          <div className="landing-hero-copy">
+            <div className="landing-kicker"><span /> A clearer way to manage your money</div>
+            <h1>Your money.<br /><em>More freedom.</em></h1>
+            <p className="landing-lede">A simpler place to see your financial picture. FlowPay brings account information and activity into one clear, easy-to-use workspace.</p>
+            <div className="landing-hero-actions"><a className="landing-cta landing-cta-large" href="/app">Explore FlowPay <ArrowRight size={18} /></a><a className="landing-secondary-link" href="#features">Discover the platform <ArrowDownLeft size={17} /></a></div>
+            <div className="landing-trust-line"><ShieldCheck size={17} /><span>Built around clarity, privacy, and responsible access</span></div>
+          </div>
+          <div className="landing-visual" aria-label="Illustration of a financial overview dashboard">
+            <div className="landing-orbit landing-orbit-one" /><div className="landing-orbit landing-orbit-two" />
+            <div className="landing-preview-card">
+              <div className="landing-preview-top"><span className="landing-preview-logo"><span>F</span> flowpay</span><span className="landing-live-label"><i /> Workspace preview</span></div>
+              <div className="landing-preview-label">YOUR FINANCIAL OVERVIEW</div>
+              <div className="landing-preview-title">Everything in view.</div>
+              <div className="landing-preview-balance"><span>Account summary</span><strong>Verified data only</strong><small>Figures appear when securely available.</small></div>
+              <div className="landing-preview-row"><span className="landing-preview-icon"><ArrowDownLeft size={18} /></span><span><b>Money received</b><small>Ledger-backed activity</small></span><span className="landing-preview-status">View</span></div>
+              <div className="landing-preview-row"><span className="landing-preview-icon"><CreditCard size={18} /></span><span><b>Cards</b><small>Secure card metadata</small></span><span className="landing-preview-status">View</span></div>
+              <div className="landing-preview-row"><span className="landing-preview-icon"><Clock3 size={18} /></span><span><b>Activity</b><small>History in one place</small></span><span className="landing-preview-status">View</span></div>
+              <div className="landing-preview-foot"><ShieldCheck size={15} /><span>No demo balances or invented transactions</span></div>
+            </div>
+            <div className="landing-float-chip"><span><ShieldCheck size={18} /></span><div><b>Security-minded</b><small>Privacy comes first</small></div></div>
+          </div>
+        </section>
+
+        <section className="landing-proof-strip" id="about"><div><b>Clear by design</b><span>Less clutter. More understanding.</span></div><div><b>Data with integrity</b><span>Financial figures are never guessed.</span></div><div><b>Built to grow</b><span>A considered foundation for what comes next.</span></div></section>
+
+        <section className="landing-features" id="features">
+          <div className="landing-section-intro"><span className="landing-section-kicker">THE FLOWPAY EXPERIENCE</span><h2>More clarity at every step.</h2><p>Thoughtful tools that help you understand your financial activity without unnecessary complexity.</p></div>
+          <div className="landing-feature-grid">
+            <article className="landing-feature"><span className="landing-feature-icon"><Wallet size={22} /></span><h3>Your financial overview</h3><p>See account information and available summaries in one organized workspace, when verified data is available.</p><a href="/app">Explore overview <ArrowRight size={15} /></a></article>
+            <article className="landing-feature"><span className="landing-feature-icon"><ArrowLeftRight size={22} /></span><h3>Activity, made clearer</h3><p>Review financial history in a straightforward layout designed to distinguish real records from unavailable data.</p><a href="/app">Explore activity <ArrowRight size={15} /></a></article>
+            <article className="landing-feature" id="security"><span className="landing-feature-icon"><ShieldCheck size={22} /></span><h3>Security-minded by default</h3><p>Customer information belongs behind authentication. Sensitive credentials and unverified balances stay out of view.</p><a href="/app">Enter workspace <ArrowRight size={15} /></a></article>
+          </div>
+        </section>
+
+        <section className="landing-bottom-cta"><div><span className="landing-section-kicker">A BETTER VIEW STARTS HERE</span><h2>Bring your financial picture into focus.</h2><p>Open the FlowPay workspace to explore the current experience and its available features.</p></div><a className="landing-cta landing-cta-large" href="/app">Open FlowPay <ArrowRight size={18} /></a></section>
+      </main>
+      <footer className="landing-footer"><a className="landing-brand" href="/"><span className="landing-brand-mark">F</span><span>flow<span>pay</span></span></a><span>© {new Date().getFullYear()} FlowPay</span><span>Independent product · Development preview</span></footer>
+    </div>
+  );
+}
+
 export default function App() {
   const [apiStatus, setApiStatus] = useState<ApiStatus>("checking");
   const [apiMessage, setApiMessage] = useState("Checking API connection…");
@@ -246,6 +301,8 @@ export default function App() {
     { name: "Customer Profile" as const, icon: UserRound },
     { name: "View Account Number" as const, icon: Eye }
   ];
+
+  if (window.location.pathname === "/") return <LandingPage />;
 
   return (
     <div className="app-shell">

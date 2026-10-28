@@ -44,7 +44,7 @@ async function getAccessToken(): Promise<string | null> {
 
 function formatMinor(value: string, currency: string): string {
   try {
-    const digits = new Intl.NumberFormat(undefined, { style: "currency", currency }).resolvedOptions().maximumFractionDigits;
+    const digits = new Intl.NumberFormat(undefined, { style: "currency", currency }).resolvedOptions().maximumFractionDigits ?? 2;
     const amount = Number(value) / (10 ** digits);
     if (!Number.isFinite(amount)) return "Unavailable";
     return new Intl.NumberFormat(undefined, { style: "currency", currency, minimumFractionDigits: digits, maximumFractionDigits: digits }).format(amount);
@@ -212,7 +212,7 @@ export default function App() {
       if (target === "Overview") setSummaryTotals([]);
       if (target === "Cards") { setCards([]); setCardEvents([]); }
       if (target === "Customer Profile") { setProfile(null); setAccounts([]); }
-      if (target !== "Transfers") setTransactions([]);
+      setTransactions([]);
     } finally {
       setCustomerLoading(false);
     }

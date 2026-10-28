@@ -670,3 +670,208 @@ footer { border-top: 1px solid #eaeae6; margin-top: 18px; }
   .account-number-value { font-size: 23px; }
   .account-number-meta { gap: 10px; }
 }
+
+
+/* Overview dashboard redesign: warmer surfaces, stronger card hierarchy, responsive spacing.
+   Shared React/CSS bundle is used by the web app and the Capacitor Android APK. */
+:root {
+  --dashboard-canvas: #f1eee8;
+  --dashboard-panel: #faf8f4;
+  --dashboard-line: #e3ddd3;
+  --dashboard-orange-soft: #ffead8;
+}
+body { background: var(--dashboard-canvas); }
+.main { background: var(--dashboard-canvas); }
+.topbar {
+  background: #faf8f4;
+  border-bottom-color: #e4ded4;
+}
+.content { max-width: 1500px; }
+.dashboard-section-heading {
+  margin: 29px 0 14px;
+  align-items: end;
+}
+.dashboard-section-heading > div { display: grid; gap: 5px; }
+.dashboard-section-heading h2 { font-size: 17px; }
+.dashboard-section-heading p { max-width: 580px; line-height: 1.6; }
+.dashboard-stat-grid {
+  grid-template-columns: minmax(0, 1.25fr) repeat(2, minmax(0, .9fr));
+  gap: 16px;
+  align-items: stretch;
+}
+.dashboard-stat-grid .stat-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 168px;
+  overflow: hidden;
+  border-radius: 17px;
+  padding: 21px 22px;
+  background: #faf8f4;
+  border-color: #e5ded4;
+  box-shadow: 0 5px 18px #392a1b08;
+}
+.dashboard-stat-grid .balance-card {
+  color: #fff;
+  border-color: #30251e;
+  background:
+    radial-gradient(ellipse at 100% 0%, #ff963c4a 0%, transparent 42%),
+    linear-gradient(135deg, #30251e 0%, #1b1a18 72%);
+  box-shadow: 0 12px 24px #32261d1a;
+}
+.dashboard-stat-grid .balance-card::after {
+  content: "";
+  position: absolute;
+  width: 138px;
+  height: 138px;
+  right: -52px;
+  bottom: -75px;
+  border: 1px solid #ff9a4b42;
+  border-radius: 50%;
+  box-shadow: 0 0 0 18px #ff9a4b0c, 0 0 0 38px #ff9a4b08;
+  pointer-events: none;
+}
+.dashboard-stat-grid .stat-top {
+  position: relative;
+  z-index: 1;
+  color: #74716b;
+  font-size: 11px;
+  font-weight: 600;
+}
+.dashboard-stat-grid .balance-card .stat-top { color: #d4c8be; }
+.dashboard-stat-grid .stat-top svg {
+  width: 34px;
+  height: 34px;
+  padding: 8px;
+  border-radius: 11px;
+  background: #ff7a1818;
+}
+.dashboard-stat-grid .balance-value,
+.dashboard-stat-grid .stat-value {
+  position: relative;
+  z-index: 1;
+  margin-top: 20px;
+  font-size: clamp(20px, 2vw, 28px);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.dashboard-stat-grid .stat-value { color: #24221f; }
+.dashboard-stat-grid .stat-foot {
+  position: relative;
+  z-index: 1;
+  margin-top: 10px;
+  color: #8a857e;
+  line-height: 1.5;
+}
+.dashboard-stat-grid .balance-card .stat-foot { color: #c4b7ac; }
+.dashboard-stat-grid .stat-card-link {
+  cursor: pointer;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.dashboard-stat-grid .stat-card-link:hover {
+  transform: translateY(-2px);
+  border-color: #f2b27e;
+  box-shadow: 0 10px 25px #392a1b12;
+}
+.dashboard-quick-actions {
+  margin-top: 18px;
+  gap: 14px;
+}
+.dashboard-quick-actions .quick-action {
+  min-height: 82px;
+  padding: 15px 17px;
+  border-radius: 14px;
+  background: #faf8f4;
+  border-color: #e5ded4;
+  box-shadow: 0 4px 14px #392a1b06;
+}
+.dashboard-quick-actions .quick-action-icon {
+  background: #ffead8;
+  border: 1px solid #ffddc0;
+}
+.dashboard-lower-grid {
+  margin-top: 20px;
+  gap: 16px;
+  align-items: stretch;
+}
+.dashboard-lower-grid > .panel {
+  border-color: #e3ddd3;
+  border-radius: 16px;
+  background: #faf8f4;
+  padding: 21px;
+  box-shadow: 0 5px 18px #392a1b07;
+}
+.dashboard-lower-grid .panel-heading {
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eae4dc;
+}
+.dashboard-lower-grid .panel-heading h2 { font-size: 14px; }
+.dashboard-lower-grid .panel-heading p { line-height: 1.6; }
+.dashboard-lower-grid .connection-row {
+  padding: 14px 0;
+  border-bottom-color: #ece6de;
+  font-size: 11px;
+}
+.dashboard-lower-grid .transaction-row {
+  padding: 13px 0;
+  border-bottom: 1px solid #ece6de;
+}
+.dashboard-lower-grid .transaction-symbol {
+  background: #ffead8;
+  color: #d9630a;
+  border-radius: 11px;
+}
+.dashboard-lower-grid .connection-help {
+  padding: 12px;
+  border-radius: 10px;
+  background: #f0ece5;
+  color: #77716a;
+  line-height: 1.7;
+}
+.dashboard-lower-grid .empty-state {
+  border-radius: 12px;
+  background: #f4f0e9;
+  margin-top: 15px;
+}
+.dashboard-lower-grid .empty-icon { background: #ffead8; }
+.dashboard-lower-grid .status-ok,
+.dashboard-lower-grid .status-wait,
+.dashboard-lower-grid .status-error { font-weight: 700; }
+@media (min-width: 1400px) {
+  .dashboard-stat-grid .stat-card { min-height: 184px; padding: 24px; }
+  .dashboard-quick-actions .quick-action { min-height: 88px; }
+}
+@media (max-width: 1050px) {
+  .dashboard-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboard-stat-grid .balance-card { grid-column: 1 / -1; min-height: 150px; }
+}
+@media (max-width: 700px) {
+  .content { padding: 23px 14px 18px; }
+  .dashboard-section-heading { margin-top: 24px; align-items: flex-start; }
+  .dashboard-section-heading h2 { font-size: 16px; }
+  .dashboard-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .dashboard-stat-grid .stat-card {
+    min-height: 137px;
+    padding: 14px;
+    border-radius: 14px;
+  }
+  .dashboard-stat-grid .balance-card { grid-column: 1 / -1; min-height: 154px; padding: 18px; }
+  .dashboard-stat-grid .stat-top { font-size: 10px; align-items: flex-start; }
+  .dashboard-stat-grid .stat-top svg { width: 29px; height: 29px; padding: 6px; }
+  .dashboard-stat-grid .stat-value { font-size: clamp(16px, 4.5vw, 22px); margin-top: 17px; }
+  .dashboard-stat-grid .balance-value { font-size: clamp(22px, 6vw, 28px); margin-top: 21px; }
+  .dashboard-stat-grid .stat-foot { font-size: 9px; margin-top: 8px; }
+  .dashboard-quick-actions {
+    grid-template-columns: 1fr;
+    gap: 9px;
+    margin-top: 13px;
+  }
+  .dashboard-quick-actions .quick-action { min-height: 72px; padding: 12px; border-radius: 12px; }
+  .dashboard-quick-actions .quick-action-icon { width: 38px; height: 38px; flex-basis: 38px; }
+  .dashboard-lower-grid { gap: 12px; margin-top: 15px; }
+  .dashboard-lower-grid > .panel { padding: 15px; border-radius: 14px; }
+}

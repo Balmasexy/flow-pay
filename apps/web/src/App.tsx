@@ -44,11 +44,12 @@ async function getAccessToken(): Promise<string | null> {
 
 function formatMinor(value: string, currency: string): string {
   try {
-    const amount = Number(value) / 100;
+    const digits = new Intl.NumberFormat(undefined, { style: "currency", currency }).resolvedOptions().maximumFractionDigits;
+    const amount = Number(value) / (10 ** digits);
     if (!Number.isFinite(amount)) return "Unavailable";
-    return new Intl.NumberFormat(undefined, { style: "currency", currency, maximumFractionDigits: 2 }).format(amount);
+    return new Intl.NumberFormat(undefined, { style: "currency", currency, minimumFractionDigits: digits, maximumFractionDigits: digits }).format(amount);
   } catch {
-    return `${currency} ${(Number(value) / 100).toFixed(2)}`;
+    return `${currency} ${value}`;
   }
 }
 
@@ -70,7 +71,6 @@ export default function App() {
       : "Overview";
   });
   const [menuOpen, setMenuOpen] = useState(false);
-  const [featureMessage, setFeatureMessage] = useState("Card issuing and controls are not connected to the backend.");
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>("all");
   const [customerMessage, setCustomerMessage] = useState("Sign-in session has not been checked yet.");
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
@@ -358,12 +358,12 @@ export default function App() {
               <div className="balance-value">{summaryTotals.length ? summaryTotals.map((total) => formatMinor(total.net_balance_minor, total.currency)).join(" · ") : "Not available"}</div>
               <div className="stat-foot">{summaryTotals.length ? "Posted ledger balances" : "Awaiting verified account data"}</div>
             </article>
-            <article className="stat-card">
+            <article className="stat-card stat-card-link" role="button" tabIndex={0} onClick={() => { setPage("Money Received"); window.sessionStorage.setItem("flowpay.currentPage", "Money Received"); }} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setPage("Money Received"); window.sessionStorage.setItem("flowpay.currentPage", "Money Received"); } }}>
               <div className="stat-top"><span>Money received</span><ArrowDownLeft size={19} /></div>
               <div className="stat-value">{summaryTotals.length ? summaryTotals.map((total) => formatMinor(total.money_received_minor, total.currency)).join(" · ") : "—"}</div>
               <div className="stat-foot">{summaryTotals.length ? "Posted ledger credits" : "Awaiting authenticated ledger data"}</div>
             </article>
-            <article className="stat-card">
+            <article className="stat-card stat-card-link" role="button" tabIndex={0} onClick={() => { setPage("Money Sent"); window.sessionStorage.setItem("flowpay.currentPage", "Money Sent"); }} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setPage("Money Sent"); window.sessionStorage.setItem("flowpay.currentPage", "Money Sent"); } }}>
               <div className="stat-top"><span>Money sent</span><ArrowUpRight size={19} /></div>
               <div className="stat-value">{summaryTotals.length ? summaryTotals.map((total) => formatMinor(total.money_sent_minor, total.currency)).join(" · ") : "—"}</div>
               <div className="stat-foot">{summaryTotals.length ? "Posted ledger debits" : "Awaiting authenticated ledger data"}</div>
@@ -467,14 +467,14 @@ export default function App() {
                   <div className="feature-icon"><CreditCard size={24} /></div>
                   <h2>Virtual card</h2>
                   <p>For supported online purchases after card issuance is integrated.</p>
-                  <div className="feature-status"><span className="status-dot" /> Not issued</div>
+                  <div className="feature-status"><span className="status-dot" /> Provider not configured</div>
                   <button className="feature-button" disabled aria-disabled="true" title="Requires issuing-provider integration">Virtual card issuance unavailable</button>
                 </article>
                 <article className="panel feature-card">
                   <div className="feature-icon"><Wallet size={24} /></div>
                   <h2>Physical card</h2>
                   <p>Physical card ordering and delivery are not connected to the backend.</p>
-                  <div className="feature-status"><span className="status-dot" /> Not issued</div>
+                  <div className="feature-status"><span className="status-dot" /> Provider not configured</div>
                   <button className="feature-button" disabled aria-disabled="true" title="Requires issuing-provider integration">Physical card ordering unavailable</button>
                 </article>
                 <article className="panel feature-card">

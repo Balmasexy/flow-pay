@@ -3,7 +3,7 @@ import {
   ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Bell,
   CheckCircle2, CircleHelp, Clock3, CreditCard, Home,
   Menu, RefreshCw, ShieldCheck, Wallet, X, UserRound, LockKeyhole,
-  Eye, UserRoundCheck, Building2
+  Eye, UserRoundCheck, Building2, ChevronDown
 } from "lucide-react";
 
 const API_URL = (import.meta.env.VITE_API_BASE_URL || "https://flowpay-backend-qz79.onrender.com").replace(/\/$/, "");
@@ -75,6 +75,7 @@ export default function App() {
       : "Overview";
   });
   const [menuOpen, setMenuOpen] = useState(false);
+  const [refreshMenuOpen, setRefreshMenuOpen] = useState(false);
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>("all");
   const [customerMessage, setCustomerMessage] = useState("Sign-in session has not been checked yet.");
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
@@ -355,11 +356,40 @@ export default function App() {
                               : "Review verified account activity when ledger-backed history is available."}
               </p>
             </div>
-            {page !== "Overview" && <button
+            {page === "Overview" ? (
+              <div className="refresh-dropdown">
+                <button
+                  className="refresh-button refresh-dropdown-trigger"
+                  onClick={() => setRefreshMenuOpen((open) => !open)}
+                  aria-expanded={refreshMenuOpen}
+                  aria-haspopup="menu"
+                  aria-label="Refresh options"
+                >
+                  <RefreshCw size={16} /> Refresh <ChevronDown size={15} />
+                </button>
+                {refreshMenuOpen && (
+                  <div className="refresh-dropdown-menu" role="menu">
+                    <button role="menuitem" onClick={() => {
+                      setRefreshMenuOpen(false);
+                      void checkApi();
+                      void loadCustomerData("Overview");
+                    }}>
+                      <RefreshCw size={15} /> Refresh dashboard
+                    </button>
+                    <button role="menuitem" onClick={() => {
+                      setRefreshMenuOpen(false);
+                      void checkApi();
+                    }}>
+                      <ShieldCheck size={15} /> Refresh connection status
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : <button
               className="refresh-button"
-              onClick={() => { void checkApi(); }}
+              onClick={() => { void checkApi(); void loadCustomerData(page); }}
               aria-label="Refresh FlowPay"
-              title="Refresh API and database connection status without reloading the page"
+              title="Refresh page data and connection status"
             >
               <RefreshCw size={16} /> Refresh
             </button>}

@@ -58,7 +58,9 @@ jobs:
           : "${ANDROID_HOME:?GitHub runner Android SDK path is missing}"
           SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
           test -x "$SDKMANAGER"
+          set +o pipefail
           yes | "$SDKMANAGER" --licenses >/dev/null
+          set -o pipefail
           "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Install API dependencies

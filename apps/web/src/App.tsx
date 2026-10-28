@@ -3,7 +3,7 @@ import {
   ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Bell,
   CheckCircle2, CircleHelp, Clock3, CreditCard, Home,
   Menu, RefreshCw, ShieldCheck, Wallet, X, UserRound, LockKeyhole,
-  Eye, UserRoundCheck, CalendarDays, Building2
+  Eye, UserRoundCheck, Building2
 } from "lucide-react";
 
 const API_URL = (import.meta.env.VITE_API_BASE_URL || "https://flowpay-backend-qz79.onrender.com").replace(/\/$/, "");

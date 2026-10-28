@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - feat/refresh-button
+      - feat/authenticated-customer-accounts
 
 permissions:
   contents: read
@@ -19,7 +20,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: feat/refresh-button
+          ref: ${{ github.ref_name }}
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -33,6 +34,12 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install API dependencies
+        run: npm ci --prefix apps/api
+
+      - name: Typecheck API
+        run: npm run typecheck --prefix apps/api
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3

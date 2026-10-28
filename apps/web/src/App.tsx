@@ -13,7 +13,12 @@ type Page = "Overview" | "Transfers" | "Cards" | "Activity";
 export default function App() {
   const [apiStatus, setApiStatus] = useState<ApiStatus>("checking");
   const [apiMessage, setApiMessage] = useState("Checking API connection…");
-  const [page, setPage] = useState<Page>("Overview");
+  const [page, setPage] = useState<Page>(() => {
+    const savedPage = window.sessionStorage.getItem("flowpay.currentPage");
+    return savedPage === "Transfers" || savedPage === "Cards" || savedPage === "Activity"
+      ? savedPage
+      : "Overview";
+  });
   const [menuOpen, setMenuOpen] = useState(false);
   const [featureMessage, setFeatureMessage] = useState("Card issuing and controls are not connected to the backend.");
 
@@ -74,6 +79,7 @@ export default function App() {
               className={`nav-item ${page === name ? "nav-active" : ""}`}
               onClick={() => {
                 setPage(name);
+                window.sessionStorage.setItem("flowpay.currentPage", name);
                 setMenuOpen(false);
               }}
             >
@@ -136,8 +142,16 @@ export default function App() {
                       : "Review verified account activity when ledger-backed history is available."}
               </p>
             </div>
-            <button className="refresh-button" onClick={() => void checkApi()}>
-              <RefreshCw size={16} /> Check connection
+            <button
+              className="refresh-button"
+              onClick={() => {
+                window.sessionStorage.setItem("flowpay.currentPage", page);
+                window.location.reload();
+              }}
+              aria-label="Refresh FlowPay"
+              title="Refresh all FlowPay page content and connection status"
+            >
+              <RefreshCw size={16} /> Refresh
             </button>
           </div>
 

@@ -28,3 +28,23 @@ This is a **planning and starter scaffold only**. It contains no live payment in
 - No real money, no fake spendable balances, and no live payment calls in this scaffold.
 - All financial state must be derived from server-side ledger entries; clients cannot write balances.
 - Production deployment is intentionally not configured.
+
+
+## Customer finance API (read-only milestone)
+
+The current implementation adds customer-scoped read endpoints. It does not enable money movement or card mutations.
+
+- `GET /v1/me/profile` — authenticated customer profile.
+- `GET /v1/me/accounts` — customer account statuses and ledger-derived balances.
+- `GET /v1/me/summary` — posted-ledger net balance, money received, and money sent by currency.
+- `GET /v1/me/transactions?type=all|received|sent|transfers&limit=50` — customer-scoped ledger history.
+- `GET /v1/me/cards` — card metadata only.
+- `GET /v1/me/card-events` and `GET /v1/me/cards/:id/events` — read-only card audit history.
+
+### Required environment and rollout
+
+Configure the web build with `VITE_NEON_AUTH_URL`. Configure the API with `NEON_AUTH_JWKS_URL`, `NEON_AUTH_ISSUER`, `NEON_AUTH_AUDIENCE`, `DATABASE_URL`, and the allowed web origin in `WEB_ORIGIN`.
+
+Migration `apps/api/migrations/003_customer_profile_cards.sql` is additive but **has not been applied automatically**. Review and back up the database before applying it. It creates a verified-auth-subject mapping column and stores non-sensitive card metadata; it does not automatically link any existing identity. Map a customer's verified Neon Auth subject to the correct existing FlowPay customer profile only after confirming identity.
+
+No PAN, CVV/CVC, PIN, passwords, or session tokens may be stored in card metadata or exposed by API responses. Virtual-card issuance, physical-card orders, freeze/unfreeze, PIN changes, spending-limit updates, transfers, and payments remain disabled until a provider-backed, authenticated, audited implementation is reviewed and approved.

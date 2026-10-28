@@ -415,3 +415,41 @@ footer { border-top: 1px solid #eaeae6; margin-top: 18px; }
   .history-footer .refresh-button { width: 100%; justify-content: center; }
   .history-filter { flex: 1 1 auto; }
 }
+
+
+/* Authenticated customer finance, profile, and card views */
+.transaction-list { display: flex; flex-direction: column; }
+.transaction-row { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid #f0f0ed; min-width: 0; }
+.transaction-row:last-child { border-bottom: 0; }
+.transaction-symbol { display: grid; place-items: center; flex: 0 0 36px; height: 36px; border-radius: 10px; background: #fff3e8; color: var(--orange); }
+.transaction-copy { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 0; }
+.transaction-copy strong { font-size: 11px; overflow-wrap: anywhere; }
+.transaction-copy span { color: #858780; font-size: 10px; line-height: 1.5; }
+.transaction-amount { font-size: 11px; white-space: nowrap; }
+.customer-card-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
+.customer-card-record { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.customer-card-record-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.customer-card-record h3 { font-size: 13px; }
+.customer-card-record > p { font-size: 13px; letter-spacing: .08em; font-weight: 700; }
+.card-record-meta { color: #858780; font-size: 10px; line-height: 1.5; }
+.card-status-pill { display: inline-flex; padding: 6px 9px; border-radius: 999px; background: #f4f4f0; color: #686962; font-size: 10px; font-weight: 700; text-transform: capitalize; }
+.card-status-active { background: #eaf8ef; color: #207545; }
+.card-status-frozen, .card-status-blocked { background: #fff0ee; color: #a5382b; }
+.card-status-pending { background: #fff5e9; color: #95652c; }
+.profile-summary-panel { width: 100%; }
+.profile-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+.profile-detail-grid > div { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 15px; border: 1px solid var(--border); border-radius: 9px; background: #fcfcfa; }
+.profile-detail-grid span { color: #858780; font-size: 10px; }
+.profile-detail-grid strong { font-size: 12px; overflow-wrap: anywhere; }
+.profile-security-note { display: flex; align-items: flex-start; gap: 12px; }
+.profile-security-note > svg { flex-shrink: 0; color: var(--orange); }
+.profile-security-note strong { font-size: 12px; }
+.profile-security-note p { margin-top: 6px; color: #858780; font-size: 11px; line-height: 1.7; }
+.customer-card-list + .card-feature-grid { margin-top: 4px; }
+@media (max-width: 700px) {
+  .customer-card-list, .profile-detail-grid { grid-template-columns: 1fr; }
+  .transaction-row { align-items: flex-start; gap: 9px; }
+  .transaction-symbol { flex-basis: 32px; height: 32px; }
+  .transaction-amount { max-width: 38%; white-space: normal; text-align: right; overflow-wrap: anywhere; }
+  .card-status-pill { font-size: 9px; }
+}

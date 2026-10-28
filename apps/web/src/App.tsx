@@ -2,14 +2,61 @@ import { useEffect, useState } from "react";
 import {
   ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Bell,
   CheckCircle2, CircleHelp, Clock3, CreditCard, Home,
-  Menu, RefreshCw, ShieldCheck, Wallet, X
+  Menu, RefreshCw, ShieldCheck, Wallet, X, UserRound, LockKeyhole
 } from "lucide-react";
 
 const API_URL = (import.meta.env.VITE_API_BASE_URL || "https://flowpay-backend-qz79.onrender.com").replace(/\/$/, "");
+const AUTH_URL = (import.meta.env.VITE_NEON_AUTH_URL || "").replace(/\/$/, "");
 
 type ApiStatus = "checking" | "connected" | "unavailable";
 type DatabaseStatus = "checking" | "connected" | "unavailable" | "not_configured";
-type Page = "Overview" | "Transfers" | "Cards" | "Activity";
+type Page = "Overview" | "Transfers" | "Cards" | "Activity" | "Money Received" | "Money Sent" | "Customer Profile";
+type ActivityFilter = "all" | "received" | "sent" | "transfers" | "cards";
+type CustomerProfile = { id: string; email: string | null; status: string; created_at: string };
+type Account = { id: string; currency: string; status: string; ledger_balance_minor: string };
+type SummaryTotal = { currency: string; net_balance_minor: string; money_received_minor: string; money_sent_minor: string };
+type Transaction = { id: string; transaction_type: string; status: string; description: string | null; created_at: string; currency: string; amount_minor: string };
+type CustomerCard = { id: string; card_type: "virtual" | "physical"; status: string; last4: string | null; expiry_month: number | null; expiry_year: number | null; created_at: string; updated_at: string };
+type CardEvent = { id: string; card_id: string; event_type: string; outcome: string; created_at: string };
+
+async function getAccessToken(): Promise<string | null> {
+  if (!AUTH_URL) return null;
+  try {
+    const response = await fetch(`${AUTH_URL}/token`, {
+      method: "GET",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!response.ok) return null;
+    const body: unknown = await response.json();
+    if (typeof body !== "object" || body === null) return null;
+    const record = body as Record<string, unknown>;
+    const session = typeof record.session === "object" && record.session !== null
+      ? record.session as Record<string, unknown> : {};
+    const token = [record.access_token, record.token, session.access_token]
+      .find((value): value is string => typeof value === "string" && value.split(".").length === 3);
+    return token ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function formatMinor(value: string, currency: string): string {
+  try {
+    const digits = new Intl.NumberFormat(undefined, { style: "currency", currency }).resolvedOptions().maximumFractionDigits;
+    const amount = Number(value) / (10 ** digits);
+    if (!Number.isFinite(amount)) return "Unavailable";
+    return new Intl.NumberFormat(undefined, { style: "currency", currency, minimumFractionDigits: digits, maximumFractionDigits: digits }).format(amount);
+  } catch {
+    return `${currency} ${value}`;
+  }
+}
+
+function formatDate(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Date unavailable" : date.toLocaleString();
+}
 
 export default function App() {
   const [apiStatus, setApiStatus] = useState<ApiStatus>("checking");
@@ -18,13 +65,21 @@ export default function App() {
   const [databaseName, setDatabaseName] = useState<string | null>(null);
   const [page, setPage] = useState<Page>(() => {
     const savedPage = window.sessionStorage.getItem("flowpay.currentPage");
-    return savedPage === "Transfers" || savedPage === "Cards" || savedPage === "Activity"
+    return savedPage === "Transfers" || savedPage === "Cards" || savedPage === "Activity" ||
+      savedPage === "Money Received" || savedPage === "Money Sent" || savedPage === "Customer Profile"
       ? savedPage
       : "Overview";
   });
   const [menuOpen, setMenuOpen] = useState(false);
-  const [featureMessage, setFeatureMessage] = useState("Card issuing and controls are not connected to the backend.");
-  const [activityFilter, setActivityFilter] = useState<"all" | "transfers" | "cards">("all");
+  const [activityFilter, setActivityFilter] = useState<ActivityFilter>("all");
+  const [customerMessage, setCustomerMessage] = useState("Sign-in session has not been checked yet.");
+  const [profile, setProfile] = useState<CustomerProfile | null>(null);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [summaryTotals, setSummaryTotals] = useState<SummaryTotal[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [cards, setCards] = useState<CustomerCard[]>([]);
+  const [cardEvents, setCardEvents] = useState<CardEvent[]>([]);
+  const [customerLoading, setCustomerLoading] = useState(false);
 
   async function checkApi() {
     if (!API_URL) {
@@ -75,15 +130,110 @@ export default function App() {
     }
   }
 
+  async function apiGet<T>(path: string): Promise<T> {
+    const token = await getAccessToken();
+    if (!token) {
+      setCustomerMessage(AUTH_URL
+        ? "No valid signed-in session was found. Sign in through the configured Neon Auth service."
+        : "Neon Auth is not configured. Set VITE_NEON_AUTH_URL to connect customer data.");
+      throw new Error("AUTHENTICATION_REQUIRED");
+    }
+    const response = await fetch(`${API_URL}${path}`, {
+      headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+      cache: "no-store",
+      signal: AbortSignal.timeout(10000)
+    });
+    const body: unknown = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const message = typeof body === "object" && body !== null && "error" in body
+        ? String((body as { error: unknown }).error) : `HTTP ${response.status}`;
+      throw new Error(message);
+    }
+    return body as T;
+  }
+
+  async function loadCustomerData(target: Page) {
+    if (target === "Transfers") return;
+    setCustomerLoading(true);
+    try {
+      if (target === "Overview") {
+        const [summary, history] = await Promise.all([
+          apiGet<{ totals: SummaryTotal[] }>("/v1/me/summary"),
+          apiGet<{ transactions: Transaction[] }>("/v1/me/transactions?limit=5")
+        ]);
+        setSummaryTotals(summary.totals);
+        setTransactions(history.transactions);
+        setCustomerMessage("Customer financial summary loaded from posted ledger entries.");
+      } else if (target === "Money Received" || target === "Money Sent" || target === "Activity") {
+        const filter = target === "Money Received" ? "received"
+          : target === "Money Sent" ? "sent" : activityFilter;
+        if (target !== "Activity") {
+          const summary = await apiGet<{ totals: SummaryTotal[] }>("/v1/me/summary");
+          setSummaryTotals(summary.totals);
+        }
+        if (filter === "cards") {
+          const result = await apiGet<{ events: CardEvent[] }>("/v1/me/card-events?limit=100");
+          setCardEvents(result.events);
+          setTransactions([]);
+          setCustomerMessage("Card audit history loaded from the authenticated customer API.");
+        } else {
+          const result = await apiGet<{ transactions: Transaction[] }>(`/v1/me/transactions?type=${filter}&limit=100`);
+          setTransactions(result.transactions);
+          setCustomerMessage("Transaction history loaded from the authenticated ledger API.");
+        }
+      } else if (target === "Cards") {
+        const [cardResult, eventResult] = await Promise.all([
+          apiGet<{ cards: CustomerCard[] }>("/v1/me/cards"),
+          apiGet<{ events: CardEvent[] }>("/v1/me/card-events?limit=50")
+        ]);
+        setCards(cardResult.cards);
+        setCardEvents(eventResult.events);
+        setCustomerMessage("Card metadata and audit history loaded. Sensitive card credentials are never returned.");
+      } else if (target === "Customer Profile") {
+        const [profileResult, accountResult] = await Promise.all([
+          apiGet<{ profile: CustomerProfile }>("/v1/me/profile"),
+          apiGet<{ accounts: Account[] }>("/v1/me/accounts")
+        ]);
+        setProfile(profileResult.profile);
+        setAccounts(accountResult.accounts);
+        setCustomerMessage("Customer profile and account status loaded.");
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "CUSTOMER_DATA_UNAVAILABLE";
+      if (message !== "AUTHENTICATION_REQUIRED") {
+        setCustomerMessage(message === "CUSTOMER_PROFILE_NOT_FOUND"
+          ? "This signed-in identity is not mapped to a FlowPay customer profile yet."
+          : message === "AUTH_NOT_CONFIGURED"
+            ? "The backend Neon Auth issuer, audience, and JWKS settings are not configured."
+            : message === "CUSTOMER_DATA_UNAVAILABLE"
+              ? "Customer data is unavailable. Check the additive migration and API logs."
+              : `Customer data unavailable: ${message}`);
+      }
+      if (target === "Overview") setSummaryTotals([]);
+      if (target === "Cards") { setCards([]); setCardEvents([]); }
+      if (target === "Customer Profile") { setProfile(null); setAccounts([]); }
+      if (target !== "Transfers") setTransactions([]);
+    } finally {
+      setCustomerLoading(false);
+    }
+  }
+
   useEffect(() => {
     void checkApi();
   }, []);
 
+  useEffect(() => {
+    void loadCustomerData(page);
+  }, [page, activityFilter]);
+
   const nav = [
     { name: "Overview" as const, icon: Home },
+    { name: "Money Received" as const, icon: ArrowDownLeft },
+    { name: "Money Sent" as const, icon: ArrowUpRight },
     { name: "Transfers" as const, icon: ArrowLeftRight },
     { name: "Cards" as const, icon: CreditCard },
-    { name: "Activity" as const, icon: Clock3 }
+    { name: "Activity" as const, icon: Clock3 },
+    { name: "Customer Profile" as const, icon: UserRound }
   ];
 
   return (
@@ -165,7 +315,13 @@ export default function App() {
                     ? "Explore card tools while secure issuing services are being built."
                     : page === "Transfers"
                       ? "Review the transfer workflow and the checks required before it can be enabled."
-                      : "Review verified account activity when ledger-backed history is available."}
+                      : page === "Money Received"
+                        ? "Review incoming funds verified against posted ledger entries."
+                        : page === "Money Sent"
+                          ? "Review outgoing funds verified against posted ledger entries."
+                          : page === "Customer Profile"
+                            ? "Review your authenticated customer profile and account status."
+                            : "Review verified account activity when ledger-backed history is available."}
               </p>
             </div>
             <button
@@ -199,18 +355,18 @@ export default function App() {
           <section className="stat-grid">
             <article className="stat-card balance-card">
               <div className="stat-top"><span>Available balance</span><Wallet size={19} /></div>
-              <div className="balance-value">Not available</div>
-              <div className="stat-foot">Awaiting verified account data</div>
+              <div className="balance-value">{summaryTotals.length ? summaryTotals.map((total) => formatMinor(total.net_balance_minor, total.currency)).join(" · ") : "Not available"}</div>
+              <div className="stat-foot">{summaryTotals.length ? "Posted ledger balances" : "Awaiting verified account data"}</div>
             </article>
-            <article className="stat-card">
+            <article className="stat-card stat-card-link" role="button" tabIndex={0} onClick={() => { setPage("Money Received"); window.sessionStorage.setItem("flowpay.currentPage", "Money Received"); }} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setPage("Money Received"); window.sessionStorage.setItem("flowpay.currentPage", "Money Received"); } }}>
               <div className="stat-top"><span>Money received</span><ArrowDownLeft size={19} /></div>
-              <div className="stat-value">—</div>
-              <div className="stat-foot">No transaction data connected</div>
+              <div className="stat-value">{summaryTotals.length ? summaryTotals.map((total) => formatMinor(total.money_received_minor, total.currency)).join(" · ") : "—"}</div>
+              <div className="stat-foot">{summaryTotals.length ? "Posted ledger credits" : "Awaiting authenticated ledger data"}</div>
             </article>
-            <article className="stat-card">
+            <article className="stat-card stat-card-link" role="button" tabIndex={0} onClick={() => { setPage("Money Sent"); window.sessionStorage.setItem("flowpay.currentPage", "Money Sent"); }} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setPage("Money Sent"); window.sessionStorage.setItem("flowpay.currentPage", "Money Sent"); } }}>
               <div className="stat-top"><span>Money sent</span><ArrowUpRight size={19} /></div>
-              <div className="stat-value">—</div>
-              <div className="stat-foot">No transaction data connected</div>
+              <div className="stat-value">{summaryTotals.length ? summaryTotals.map((total) => formatMinor(total.money_sent_minor, total.currency)).join(" · ") : "—"}</div>
+              <div className="stat-foot">{summaryTotals.length ? "Posted ledger debits" : "Awaiting authenticated ledger data"}</div>
             </article>
           </section>
 
@@ -235,14 +391,20 @@ export default function App() {
           <section className="lower-grid">
             <article className="panel activity-panel">
               <div className="panel-heading">
-                <div><h2>Recent activity</h2><p>Your latest account movements</p></div>
+                <div><h2>Recent activity</h2><p>Latest records from the authenticated ledger</p></div>
                 <Clock3 size={20} />
               </div>
-              <div className="empty-state">
+              {transactions.length ? <div className="transaction-list">
+                {transactions.slice(0, 5).map((tx) => <div className="transaction-row" key={tx.id + tx.currency}>
+                  <span className="transaction-symbol">{Number(tx.amount_minor) >= 0 ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}</span>
+                  <div className="transaction-copy"><strong>{tx.description || tx.transaction_type}</strong><span>{formatDate(tx.created_at)} · {tx.status}</span></div>
+                  <strong className="transaction-amount">{formatMinor(String(Math.abs(Number(tx.amount_minor))), tx.currency)}</strong>
+                </div>)}
+              </div> : <div className="empty-state">
                 <div className="empty-icon"><ArrowLeftRight size={23} /></div>
-                <strong>No activity to display</strong>
-                <span>Transactions will appear once the secure ledger and account services are ready.</span>
-              </div>
+                <strong>{customerLoading ? "Loading verified activity…" : "No verified activity available"}</strong>
+                <span>{customerMessage}</span>
+              </div>}
             </article>
 
             <article className="panel connection-panel">
@@ -279,36 +441,48 @@ export default function App() {
               <section className="notice">
                 <div className="notice-icon"><ShieldCheck size={21} /></div>
                 <div>
-                  <strong>Card services are not connected yet</strong>
-                  <p>These card panels are available to explore, but FlowPay has no card-issuing or card-control API yet. No real card is issued or activated from this preview.</p>
+                  <strong>Card management and security status</strong>
+                  <p>Card records are loaded only from the authenticated customer API. Issuance, ordering, activation, freezing, PIN changes, and spending-limit updates remain disabled until an issuing provider is configured.</p>
                 </div>
               </section>
               <section className="section-heading">
                 <div><h2>Your cards</h2><p>Card management becomes available after secure issuing services are implemented.</p></div>
                 <span className="preview-label">PREVIEW</span>
               </section>
-              <p className="feature-feedback" role="status">{featureMessage}</p>
+              <p className="feature-feedback" role="status">{customerLoading ? "Loading customer card data…" : customerMessage}</p>
+              <section className="customer-card-list">
+                {cards.length ? cards.map((card) => <article className="panel customer-card-record" key={card.id}>
+                  <div className="customer-card-record-top">
+                    <div className="feature-icon"><CreditCard size={22} /></div>
+                    <span className={`card-status-pill card-status-${card.status}`}>{card.status}</span>
+                  </div>
+                  <h3>{card.card_type === "virtual" ? "Virtual card" : "Physical card"}</h3>
+                  <p>{card.last4 ? `•••• ${card.last4}` : "Card number hidden / not provided"}</p>
+                  <span className="card-record-meta">{card.expiry_month && card.expiry_year ? `Expires ${String(card.expiry_month).padStart(2, "0")}/${card.expiry_year}` : "Expiry not available"}</span>
+                  <span className="card-record-meta">Added {formatDate(card.created_at)}</span>
+                </article>) : <div className="panel card-history-status"><ShieldCheck size={20} /><div><strong>{customerLoading ? "Loading cards…" : "No card records found"}</strong><p>{customerMessage} No virtual or physical card is created by this screen.</p></div></div>}
+              </section>
               <section className="card-feature-grid">
                 <article className="panel feature-card">
                   <div className="feature-icon"><CreditCard size={24} /></div>
                   <h2>Virtual card</h2>
                   <p>For supported online purchases after card issuance is integrated.</p>
-                  <div className="feature-status"><span className="status-dot" /> Not issued</div>
-                  <button className="feature-button" onClick={() => setFeatureMessage("Virtual card issuance is not connected. No card has been created.")}>Check virtual card</button>
+                  <div className="feature-status"><span className="status-dot" /> Provider not configured</div>
+                  <button className="feature-button" disabled aria-disabled="true" title="Requires issuing-provider integration">Virtual card issuance unavailable</button>
                 </article>
                 <article className="panel feature-card">
                   <div className="feature-icon"><Wallet size={24} /></div>
                   <h2>Physical card</h2>
                   <p>Physical card ordering and delivery are not connected to the backend.</p>
-                  <div className="feature-status"><span className="status-dot" /> Not issued</div>
-                  <button className="feature-button" onClick={() => setFeatureMessage("Physical card ordering and delivery are not connected. No order has been placed.")}>Check physical card</button>
+                  <div className="feature-status"><span className="status-dot" /> Provider not configured</div>
+                  <button className="feature-button" disabled aria-disabled="true" title="Requires issuing-provider integration">Physical card ordering unavailable</button>
                 </article>
                 <article className="panel feature-card">
                   <div className="feature-icon"><ShieldCheck size={24} /></div>
                   <h2>Card security</h2>
                   <p>Freeze, unfreeze, PIN management, and spending limits require verified card services.</p>
                   <div className="feature-status"><span className="status-dot" /> Not connected</div>
-                  <button className="feature-button" onClick={() => setFeatureMessage("Freeze, PIN, and spending-limit controls need a verified card service before they can be enabled.")}>Check security tools</button>
+                  <button className="feature-button" disabled aria-disabled="true" title="Card security mutations remain locked">Card security controls locked</button>
                 </article>
               </section>
               <section className="panel card-lifecycle">
@@ -340,8 +514,12 @@ export default function App() {
                 </div>
                 <div className="card-history-status">
                   <span className="status-dot" />
-                  <div><strong>No verified card history available</strong><p>FlowPay has no authenticated card-history endpoint yet. No sample card transactions or card events are shown as real.</p></div>
+                  <div><strong>{cardEvents.length ? `${cardEvents.length} card audit events loaded` : "No verified card history available"}</strong><p>{cardEvents.length ? "Events are read-only and scoped to the signed-in customer." : customerMessage}</p></div>
                 </div>
+                {cardEvents.map((event) => <div className="transaction-row" key={event.id}>
+                  <span className="transaction-symbol"><ShieldCheck size={18} /></span>
+                  <div className="transaction-copy"><strong>{event.event_type}</strong><span>{formatDate(event.created_at)} · {event.outcome}</span></div>
+                </div>)}
                 <button className="feature-button" onClick={() => {
                   setActivityFilter("cards");
                   setPage("Activity");
@@ -404,6 +582,49 @@ export default function App() {
                 <button className="feature-button transfer-disabled-button" disabled aria-disabled="true">Transfers not available</button>
               </section>
             </section>
+          ) : page === "Customer Profile" ? (
+            <section className="page-grid profile-page">
+              <section className="notice">
+                <div className="notice-icon"><LockKeyhole size={21} /></div>
+                <div><strong>Customer-scoped profile</strong><p>Profile and account data are fetched only after the backend validates the signed-in Neon Auth token. No profile data is inferred from browser input.</p></div>
+              </section>
+              <section className="panel profile-summary-panel">
+                <div className="panel-heading"><div><h2>Customer profile</h2><p>Verified identity details from FlowPay</p></div><UserRound size={20} /></div>
+                {profile ? <div className="profile-detail-grid">
+                  <div><span>Customer ID</span><strong>{profile.id}</strong></div>
+                  <div><span>Email</span><strong>{profile.email || "Not provided"}</strong></div>
+                  <div><span>Account status</span><strong className={profile.status === "active" ? "status-ok" : "status-error"}>{profile.status}</strong></div>
+                  <div><span>Customer since</span><strong>{formatDate(profile.created_at)}</strong></div>
+                </div> : <div className="empty-state"><div className="empty-icon"><UserRound size={23} /></div><strong>{customerLoading ? "Loading customer profile…" : "Profile unavailable"}</strong><span>{customerMessage}</span></div>}
+              </section>
+              <section className="panel">
+                <div className="panel-heading"><div><h2>Accounts</h2><p>Account status and ledger balances</p></div><Wallet size={20} /></div>
+                {accounts.length ? accounts.map((account) => <div className="connection-row" key={account.id}>
+                  <span>{account.currency} · {account.id.slice(0, 8)}…</span>
+                  <span><strong>{formatMinor(account.ledger_balance_minor, account.currency)}</strong> · {account.status}</span>
+                </div>) : <div className="empty-state"><strong>{customerLoading ? "Loading accounts…" : "No customer accounts available"}</strong><span>{customerMessage}</span></div>}
+              </section>
+              <section className="panel profile-security-note">
+                <ShieldCheck size={22} /><div><strong>Profile security</strong><p>Only email, status, account identifiers, and ledger-derived balances are displayed. Passwords, session cookies, tokens, card PINs, and card security codes are never displayed.</p></div>
+              </section>
+            </section>
+          ) : page === "Money Received" || page === "Money Sent" ? (
+            <section className="page-grid activity-page">
+              <section className="notice"><div className="notice-icon"><ShieldCheck size={21} /></div><div><strong>Read-only ledger history</strong><p>These totals and records come from posted ledger entries only. No payment is created or initiated from this page.</p></div></section>
+              <section className="panel activity-history-panel">
+                <div className="panel-heading"><div><h2>{page}</h2><p>{page === "Money Received" ? "Incoming posted ledger entries" : "Outgoing posted ledger entries"}</p></div>{page === "Money Received" ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}</div>
+                <div className="history-readiness-grid">
+                  {(summaryTotals.length ? summaryTotals : []).map((total) => <div className="history-readiness-item" key={total.currency}><span>{total.currency} {page === "Money Received" ? "received" : "sent"}</span><strong>{formatMinor(page === "Money Received" ? total.money_received_minor : total.money_sent_minor, total.currency)}</strong></div>)}
+                </div>
+                {transactions.map((tx) => <div className="transaction-row" key={tx.id + tx.currency}>
+                  <span className="transaction-symbol">{page === "Money Received" ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}</span>
+                  <div className="transaction-copy"><strong>{tx.description || tx.transaction_type}</strong><span>{formatDate(tx.created_at)} · {tx.status} · {tx.currency}</span></div>
+                  <strong className="transaction-amount">{formatMinor(String(Math.abs(Number(tx.amount_minor))), tx.currency)}</strong>
+                </div>)}
+                {!transactions.length && <div className="empty-state"><div className="empty-icon"><Clock3 size={23} /></div><strong>{customerLoading ? "Loading ledger records…" : "No verified records available"}</strong><span>{customerMessage}</span></div>}
+                <div className="history-footer"><p>{customerMessage}</p><button className="refresh-button" onClick={() => { void loadCustomerData(page); }}>Refresh history</button></div>
+              </section>
+            </section>
           ) : (
             <section className="page-grid activity-page">
               <section className="notice">
@@ -420,6 +641,8 @@ export default function App() {
                 </div>
                 <div className="history-filters" role="group" aria-label="Filter activity history">
                   <button className={activityFilter === "all" ? "history-filter history-filter-active" : "history-filter"} onClick={() => setActivityFilter("all")}>All activity</button>
+                  <button className={activityFilter === "received" ? "history-filter history-filter-active" : "history-filter"} onClick={() => setActivityFilter("received")}>Money received</button>
+                  <button className={activityFilter === "sent" ? "history-filter history-filter-active" : "history-filter"} onClick={() => setActivityFilter("sent")}>Money sent</button>
                   <button className={activityFilter === "transfers" ? "history-filter history-filter-active" : "history-filter"} onClick={() => setActivityFilter("transfers")}>Transfers</button>
                   <button className={activityFilter === "cards" ? "history-filter history-filter-active" : "history-filter"} onClick={() => setActivityFilter("cards")}>Card activity</button>
                 </div>
@@ -430,16 +653,25 @@ export default function App() {
                 </div>
                 <div className="history-empty-state">
                   <div className="empty-icon">{activityFilter === "cards" ? <CreditCard size={23} /> : activityFilter === "transfers" ? <ArrowLeftRight size={23} /> : <Clock3 size={23} />}</div>
-                  <strong>{activityFilter === "cards" ? "No verified card events available" : activityFilter === "transfers" ? "No verified transfer history available" : "No verified activity available"}</strong>
-                  <span>{activityFilter === "cards"
-                    ? "Card issuance, status changes, and card transactions will appear only after an authenticated card-history service is implemented."
-                    : activityFilter === "transfers"
-                      ? "Transfer records will appear only after authenticated transaction-history APIs and ledger reconciliation are implemented."
-                      : "Account, transfer, and card events will appear here when the backend returns verified history. No demo records are presented as real."}</span>
+                  <strong>{activityFilter === "cards"
+                    ? cardEvents.length ? `${cardEvents.length} card events loaded` : "Card history is empty"
+                    : transactions.length ? `${transactions.length} verified records` : "No verified transaction history"}</strong>
+                  <span>{activityFilter === "cards" && cardEvents.length
+                    ? "These read-only events belong to cards owned by the signed-in customer."
+                    : transactions.length ? "These records were returned by the authenticated customer-scoped API." : customerMessage}</span>
                 </div>
+                {activityFilter === "cards" && cardEvents.map((event) => <div className="transaction-row" key={event.id}>
+                  <span className="transaction-symbol"><ShieldCheck size={18} /></span>
+                  <div className="transaction-copy"><strong>{event.event_type}</strong><span>{formatDate(event.created_at)} · {event.outcome}</span></div>
+                </div>)}
+                {transactions.map((tx) => <div className="transaction-row" key={tx.id + tx.currency}>
+                  <span className="transaction-symbol">{Number(tx.amount_minor) >= 0 ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}</span>
+                  <div className="transaction-copy"><strong>{tx.description || tx.transaction_type}</strong><span>{formatDate(tx.created_at)} · {tx.status} · {tx.currency}</span></div>
+                  <strong className="transaction-amount">{formatMinor(String(Math.abs(Number(tx.amount_minor))), tx.currency)}</strong>
+                </div>)}
                 <div className="history-footer">
-                  <p>History is currently unavailable because the required customer-scoped history endpoints are not implemented.</p>
-                  <button className="refresh-button" onClick={() => { void checkApi(); }}>Refresh connection status</button>
+                  <p>{customerMessage}</p>
+                  <button className="refresh-button" onClick={() => { void checkApi(); void loadCustomerData(page); }}>Refresh data</button>
                 </div>
               </section>
             </section>

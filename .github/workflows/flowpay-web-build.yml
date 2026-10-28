@@ -4,12 +4,15 @@ on:
   pull_request:
     branches:
       - feat/api-foundation
+      - feat/card-history-repair
     paths:
       - "apps/web/**"
+      - "apps/api/**"
       - ".github/workflows/flowpay-web-build.yml"
   push:
     branches:
       - feat/card-history-repair
+      - feat/financial-dashboard-profile-cards
     paths:
       - "apps/web/**"
       - ".github/workflows/flowpay-web-build.yml"
@@ -32,5 +35,9 @@ jobs:
           cache-dependency-path: apps/web/package-lock.json
       - name: Install dependencies
         run: npm ci --prefix apps/web
-      - name: Typecheck and build
+      - name: Typecheck and build web app
         run: npm run build --prefix apps/web
+      - name: Install API dependencies
+        run: npm install --prefix apps/api
+      - name: Typecheck API
+        run: npm run typecheck --prefix apps/api

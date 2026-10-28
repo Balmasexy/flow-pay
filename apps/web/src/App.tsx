@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import {
   ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Bell,
   CheckCircle2, CircleHelp, Clock3, CreditCard, Home,
-  Menu, RefreshCw, ShieldCheck, Wallet, X, UserRound, LockKeyhole
+  Menu, RefreshCw, ShieldCheck, Wallet, X, UserRound, LockKeyhole,
+  Eye, UserRoundCheck, CalendarDays, Building2
 } from "lucide-react";
 
 const API_URL = (import.meta.env.VITE_API_BASE_URL || "https://flowpay-backend-qz79.onrender.com").replace(/\/$/, "");
@@ -10,7 +11,7 @@ const AUTH_URL = (import.meta.env.VITE_NEON_AUTH_URL || "").replace(/\/$/, "");
 
 type ApiStatus = "checking" | "connected" | "unavailable";
 type DatabaseStatus = "checking" | "connected" | "unavailable" | "not_configured" | "schema_incomplete";
-type Page = "Overview" | "Transfers" | "Cards" | "Activity" | "Money Received" | "Money Sent" | "Customer Profile";
+type Page = "Overview" | "Transfers" | "Cards" | "Activity" | "Money Received" | "Money Sent" | "Customer Profile" | "View Account Number";
 type ActivityFilter = "all" | "received" | "sent" | "transfers" | "cards";
 type CustomerProfile = { id: string; email: string | null; status: string; created_at: string };
 type Account = { id: string; currency: string; status: string; ledger_balance_minor: string };
@@ -66,7 +67,8 @@ export default function App() {
   const [page, setPage] = useState<Page>(() => {
     const savedPage = window.sessionStorage.getItem("flowpay.currentPage");
     return savedPage === "Transfers" || savedPage === "Cards" || savedPage === "Activity" ||
-      savedPage === "Money Received" || savedPage === "Money Sent" || savedPage === "Customer Profile"
+      savedPage === "Money Received" || savedPage === "Money Sent" || savedPage === "Customer Profile" ||
+      savedPage === "View Account Number"
       ? savedPage
       : "Overview";
   });
@@ -195,14 +197,16 @@ export default function App() {
         setCards(cardResult.cards);
         setCardEvents(eventResult.events);
         setCustomerMessage("Card metadata and audit history loaded. Sensitive card credentials are never returned.");
-      } else if (target === "Customer Profile") {
-        const [profileResult, accountResult] = await Promise.all([
+      } else if (target === "Customer Profile" || target === "View Account Number") {
+        const [profileResult, accountResult, cardResult] = await Promise.all([
           apiGet<{ profile: CustomerProfile }>("/v1/me/profile"),
-          apiGet<{ accounts: Account[] }>("/v1/me/accounts")
+          apiGet<{ accounts: Account[] }>("/v1/me/accounts"),
+          apiGet<{ cards: CustomerCard[] }>("/v1/me/cards")
         ]);
         setProfile(profileResult.profile);
         setAccounts(accountResult.accounts);
-        setCustomerMessage("Customer profile and account status loaded.");
+        setCards(cardResult.cards);
+        setCustomerMessage("Customer registration record, account status, and available card metadata loaded.");
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "CUSTOMER_DATA_UNAVAILABLE";
@@ -217,7 +221,7 @@ export default function App() {
       }
       if (target === "Overview") setSummaryTotals([]);
       if (target === "Cards") { setCards([]); setCardEvents([]); }
-      if (target === "Customer Profile") { setProfile(null); setAccounts([]); }
+      if (target === "Customer Profile" || target === "View Account Number") { setProfile(null); setAccounts([]); }
       setTransactions([]);
     } finally {
       setCustomerLoading(false);
@@ -239,7 +243,8 @@ export default function App() {
     { name: "Transfers" as const, icon: ArrowLeftRight },
     { name: "Cards" as const, icon: CreditCard },
     { name: "Activity" as const, icon: Clock3 },
-    { name: "Customer Profile" as const, icon: UserRound }
+    { name: "Customer Profile" as const, icon: UserRound },
+    { name: "View Account Number" as const, icon: Eye }
   ];
 
   return (
@@ -326,8 +331,10 @@ export default function App() {
                         : page === "Money Sent"
                           ? "Review outgoing funds verified against posted ledger entries."
                           : page === "Customer Profile"
-                            ? "Review your authenticated customer profile and account status."
-                            : "Review verified account activity when ledger-backed history is available."}
+                            ? "Review your registration record, account details, and virtual card preview."
+                            : page === "View Account Number"
+                              ? "Review account identifiers and the current bank-account assignment status."
+                              : "Review verified account activity when ledger-backed history is available."}
               </p>
             </div>
             <button
@@ -592,27 +599,83 @@ export default function App() {
             <section className="page-grid profile-page">
               <section className="notice">
                 <div className="notice-icon"><LockKeyhole size={21} /></div>
-                <div><strong>Customer-scoped profile</strong><p>Profile and account data are fetched only after the backend validates the signed-in Neon Auth token. No profile data is inferred from browser input.</p></div>
+                <div><strong>Customer-scoped profile</strong><p>Registration data is shown only from the authenticated customer API. Fields not supplied by the backend are marked unavailable rather than guessed or saved locally.</p></div>
               </section>
+
               <section className="panel profile-summary-panel">
-                <div className="panel-heading"><div><h2>Customer profile</h2><p>Verified identity details from FlowPay</p></div><UserRound size={20} /></div>
+                <div className="panel-heading"><div><h2>Registration details</h2><p>Details currently returned by your FlowPay profile</p></div><UserRoundCheck size={20} /></div>
                 {profile ? <div className="profile-detail-grid">
-                  <div><span>Customer ID</span><strong>{profile.id}</strong></div>
-                  <div><span>Email</span><strong>{profile.email || "Not provided"}</strong></div>
+                  <div><span>Customer reference</span><strong>{profile.id}</strong></div>
+                  <div><span>Registered email</span><strong>{profile.email || "Not provided"}</strong></div>
                   <div><span>Account status</span><strong className={profile.status === "active" ? "status-ok" : "status-error"}>{profile.status}</strong></div>
-                  <div><span>Customer since</span><strong>{formatDate(profile.created_at)}</strong></div>
-                </div> : <div className="empty-state"><div className="empty-icon"><UserRound size={23} /></div><strong>{customerLoading ? "Loading customer profile…" : "Profile unavailable"}</strong><span>{customerMessage}</span></div>}
+                  <div><span>Registration date</span><strong>{formatDate(profile.created_at)}</strong></div>
+                </div> : <div className="empty-state"><div className="empty-icon"><UserRound size={23} /></div><strong>{customerLoading ? "Loading registration details…" : "Registration details unavailable"}</strong><span>{customerMessage}</span></div>}
+                <div className="registration-unavailable">
+                  <strong>Additional registration fields</strong>
+                  <p>Full name, phone number, residential address, date of birth, and identity-verification status are not currently returned by the FlowPay profile API. They are not inferred or stored by this screen.</p>
+                </div>
+              </section>
+
+              <section className="panel">
+                <div className="panel-heading"><div><h2>Account details</h2><p>Internal account references and posted-ledger balances</p></div><Wallet size={20} /></div>
+                {accounts.length ? accounts.map((account) => <div className="profile-account-row" key={account.id}>
+                  <div className="profile-account-copy">
+                    <strong>{account.currency} account</strong>
+                    <span>Account reference: {account.id}</span>
+                    <span>Status: {account.status}</span>
+                    <span>Posted ledger balance: {formatMinor(account.ledger_balance_minor, account.currency)}</span>
+                  </div>
+                  <button className="feature-button" onClick={() => { setPage("View Account Number"); window.sessionStorage.setItem("flowpay.currentPage", "View Account Number"); }}>View account number</button>
+                </div>) : <div className="empty-state"><strong>{customerLoading ? "Loading accounts…" : "No customer accounts available"}</strong><span>{customerMessage}</span></div>}
+                <p className="connection-help">An internal account reference is not a bank account number. A bank account number appears here only after a verified provider assignment is returned by the backend.</p>
+              </section>
+
+              <section className="panel profile-virtual-card-panel">
+                <div className="panel-heading"><div><h2>Virtual card</h2><p>Card appearance preview and any existing card metadata</p></div><CreditCard size={20} /></div>
+                {(() => {
+                  const virtualCard = cards.find((card) => card.card_type === "virtual");
+                  return <div className="profile-card-layout">
+                    <div className={`virtual-card-art ${virtualCard ? "virtual-card-issued" : ""}`}>
+                      <div className="virtual-card-top"><span className="virtual-card-brand">flow<span>pay</span></span><span className="virtual-card-chip" aria-hidden="true" /></div>
+                      <div className="virtual-card-number">{virtualCard?.last4 ? `••••  ••••  ••••  ${virtualCard.last4}` : "••••  ••••  ••••  ••••"}</div>
+                      <div className="virtual-card-bottom"><div><span>CARDHOLDER</span><strong>{profile?.email || "FlowPay customer"}</strong></div><div><span>EXPIRES</span><strong>{virtualCard?.expiry_month && virtualCard?.expiry_year ? `${String(virtualCard.expiry_month).padStart(2, "0")}/${String(virtualCard.expiry_year).slice(-2)}` : "— — / — —"}</strong></div></div>
+                      <div className="virtual-card-watermark" aria-hidden="true">F</div>
+                    </div>
+                    <div className="virtual-card-info">
+                      <span className={`card-status-pill ${virtualCard ? `card-status-${virtualCard.status}` : "card-status-pending"}`}>{virtualCard ? virtualCard.status : "Preview only"}</span>
+                      <strong>{virtualCard ? "Virtual card record found" : "Virtual card not issued"}</strong>
+                      <p>{virtualCard ? "Only masked card metadata is shown. Full card number, security code, and PIN are never displayed here." : "This is a visual design preview, not an active payment card. No card number has been generated."}</p>
+                      <button className="feature-button" onClick={() => { setPage("Cards"); window.sessionStorage.setItem("flowpay.currentPage", "Cards"); }}>Open card management</button>
+                    </div>
+                  </div>;
+                })()}
+              </section>
+
+              <section className="panel profile-security-note">
+                <ShieldCheck size={22} /><div><strong>Profile and card security</strong><p>Only authenticated customer-scoped data is shown. Passwords, session tokens, full card numbers, card security codes, and PINs are never displayed. Card issuance and account-number assignment are not triggered by this page.</p></div>
+              </section>
+            </section>
+          ) : page === "View Account Number" ? (
+            <section className="page-grid account-number-page">
+              <section className="notice">
+                <div className="notice-icon"><ShieldCheck size={21} /></div>
+                <div><strong>Verified account details only</strong><p>This page does not convert an internal FlowPay account ID into a bank account number. Bank account details appear only when a verified provider assignment is available from the backend.</p></div>
               </section>
               <section className="panel">
-                <div className="panel-heading"><div><h2>Accounts</h2><p>Account status and ledger balances</p></div><Wallet size={20} /></div>
-                {accounts.length ? accounts.map((account) => <div className="connection-row" key={account.id}>
-                  <span>{account.currency} · {account.id.slice(0, 8)}…</span>
-                  <span><strong>{formatMinor(account.ledger_balance_minor, account.currency)}</strong> · {account.status}</span>
-                </div>) : <div className="empty-state"><strong>{customerLoading ? "Loading accounts…" : "No customer accounts available"}</strong><span>{customerMessage}</span></div>}
+                <div className="panel-heading"><div><h2>View account number</h2><p>Your account and bank-assignment status</p></div><Building2 size={20} /></div>
+                {accounts.length ? accounts.map((account) => <article className="account-number-card" key={account.id}>
+                  <div className="account-number-card-top"><div className="feature-icon"><Building2 size={22} /></div><span className={account.status === "active" ? "status-ok" : "status-error"}>{account.status}</span></div>
+                  <span className="account-number-label">{account.currency} account</span>
+                  <strong className="account-number-value">Not available</strong>
+                  <p className="account-number-help">A bank account number/provider assignment is not included in the current account API response.</p>
+                  <div className="account-number-meta"><span>Internal account reference</span><code>{account.id}</code></div>
+                  <div className="account-number-meta"><span>Currency</span><strong>{account.currency}</strong></div>
+                  <div className="account-number-meta"><span>Ledger status</span><strong>{account.status}</strong></div>
+                  <div className="account-number-meta"><span>Posted ledger balance</span><strong>{formatMinor(account.ledger_balance_minor, account.currency)}</strong></div>
+                </article>) : <div className="empty-state"><div className="empty-icon"><Building2 size={23} /></div><strong>{customerLoading ? "Loading account details…" : "Account details unavailable"}</strong><span>{customerMessage}</span></div>}
+                <button className="refresh-button" onClick={() => { void loadCustomerData("View Account Number"); }}>Refresh account details</button>
               </section>
-              <section className="panel profile-security-note">
-                <ShieldCheck size={22} /><div><strong>Profile security</strong><p>Only email, status, account identifiers, and ledger-derived balances are displayed. Passwords, session cookies, tokens, card PINs, and card security codes are never displayed.</p></div>
-              </section>
+              <button className="feature-button account-back-button" onClick={() => { setPage("Customer Profile"); window.sessionStorage.setItem("flowpay.currentPage", "Customer Profile"); }}>Back to customer profile</button>
             </section>
           ) : page === "Money Received" || page === "Money Sent" ? (
             <section className="page-grid activity-page">

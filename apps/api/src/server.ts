@@ -122,7 +122,7 @@ async function verifyAccessToken(authorization: string | undefined): Promise<str
   const key = await getSigningKey(header.kid);
   let signatureValid = false;
   try {
-    const publicKey = createPublicKey({ key, format: "jwk" });
+    const publicKey = createPublicKey({ key, format: "jwk" } as unknown as Parameters<typeof createPublicKey>[0]);
     signatureValid = verifySignature(
       "RSA-SHA256",
       Buffer.from(`${segments[0]}.${segments[1]}`),
@@ -137,6 +137,7 @@ async function verifyAccessToken(authorization: string | undefined): Promise<str
   const now = Math.floor(Date.now() / 1000);
   const issuer = process.env.AUTH_ISSUER?.trim();
   const audience = process.env.AUTH_AUDIENCE?.trim();
+  if (!issuer || !audience) throw new AuthUnavailableError("Authentication is not configured");
   const tokenAudience = claims.aud;
   const audienceMatches = typeof tokenAudience === "string"
     ? tokenAudience === audience

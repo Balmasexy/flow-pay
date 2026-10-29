@@ -1033,3 +1033,66 @@ body { background: var(--dashboard-canvas); }
   .auth-assurance { margin-top: 18px; }
   .auth-card { max-width: 480px; width: 100%; margin: auto; }
 }
+
+/* Low-glare warm theme: dashboard, workspace pages, and Cards */
+:root {
+  --surface: #f7f3ec;
+  --surface-soft: #eee8de;
+  --text-strong: #292722;
+  --border: #e0d8cc;
+}
+html, body, .app-shell, .main {
+  background: #eee9e0;
+  color: #292722;
+}
+.topbar {
+  background: #f4f0e8f2;
+  border-bottom-color: #ded6ca;
+}
+.icon-button, .refresh-button {
+  background: #f7f3ec;
+  border-color: #ded6ca;
+  color: #39352f;
+}
+.stat-card, .panel, .feature-card, .quick-action,
+.dashboard-stat-grid .stat-card,
+.dashboard-quick-actions .quick-action,
+.dashboard-lower-grid > .panel {
+  background: #f7f3ec;
+  border-color: #e0d8cc;
+  box-shadow: 0 3px 12px #3427190a;
+}
+.dashboard-stat-grid .stat-value { color: #292722; }
+.subtitle, .section-heading p, .panel-heading p,
+.feature-card p, .quick-action small {
+  color: #69645c;
+}
+.connection-row { border-bottom-color: #e5ddd2; }
+.feature-button {
+  background: #f0e9df;
+  border-color: #ded5c8;
+  color: #39352f;
+}
+.feature-status { color: #795b30; }
+.notice {
+  background: #f7ede1;
+  border-color: #ead6c0;
+}
+.notice strong { color: #49392b; }
+.notice p { color: #6e5c4b; }
+.feature-feedback {
+  background: #f4e8d9;
+  border-color: #e5d0b8;
+  color: #654b32;
+}
+.empty-state, .workflow-status {
+  background: #eee7dc;
+}
+.empty-state span, .connection-help { color: #69645c; }
+.card-feature-grid .feature-card { background: #f7f3ec; }
+footer { border-top-color: #ded6ca; color: #716b62; }
+@media (prefers-color-scheme: dark) {
+  /* Keep the product's intentional warm-light theme consistent on every device. */
+  html, body, .app-shell, .main { color-scheme: light; }
+}
+

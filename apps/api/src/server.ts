@@ -1,4 +1,4 @@
-import { createPublicKey, verify as verifySignature } from "node:crypto";
+import { createPublicKey, timingSafeEqual, verify as verifySignature } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { Pool } from "pg";
 import { handlePasskeyRoute } from "./passkeys.js";
@@ -267,8 +267,8 @@ const server = createServer(async (req, res) => {
   if (origin && allowedOrigins.has(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
-    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-FlowPay-Bootstrap-Token");
   }
   if (req.method === "OPTIONS") { res.writeHead(204); res.end(); return; }
   if (req.method === "GET" && pathname === "/") {
@@ -283,7 +283,7 @@ const server = createServer(async (req, res) => {
     return;
   }
   if (req.method === "GET" && pathname === "/ready") {
-    const requiredMigrations = ["001_core", "002_ledger_invariants", "003_customer_profile_cards", "004_passkeys_security"];
+    const requiredMigrations = ["001_core", "002_ledger_invariants", "003_customer_profile_cards", "004_passkeys_security", "005_admin_bootstrap"];
     if (!pool) {
       sendJson(res, 503, { service: "flowpay-api", status: "not_ready", database: "not_configured", schema: "unknown", payments: "disabled" });
       return;
@@ -336,6 +336,68 @@ const server = createServer(async (req, res) => {
         database_name: databaseName, required_migrations: requiredMigrations,
         missing_migrations: requiredMigrations, payments: "disabled"
       });
+    }
+    return;
+  }
+  if (pathname === "/v1/admin/bootstrap") {
+    if (req.method !== "POST") {
+      res.setHeader("Allow", "POST, OPTIONS");
+      sendJson(res, 405, { error: "METHOD_NOT_ALLOWED" });
+      return;
+    }
+    const auth = await authenticate(req);
+    if ("error" in auth) { authError(res, auth.error); return; }
+    const configuredToken = process.env.FLOWPAY_ADMIN_BOOTSTRAP_TOKEN;
+    const suppliedToken = req.headers["x-flowpay-bootstrap-token"];
+    if (!configuredToken || configuredToken.length < 32) {
+      sendJson(res, 503, { error: "ADMIN_BOOTSTRAP_NOT_CONFIGURED" });
+      return;
+    }
+    if (typeof suppliedToken !== "string" ||
+      Buffer.byteLength(suppliedToken) !== Buffer.byteLength(configuredToken) ||
+      !timingSafeEqual(Buffer.from(suppliedToken), Buffer.from(configuredToken))) {
+      sendJson(res, 403, { error: "ADMIN_BOOTSTRAP_FORBIDDEN" });
+      return;
+    }
+    if (!pool) { sendJson(res, 503, { error: "DATABASE_NOT_CONFIGURED" }); return; }
+
+    let client;
+    try {
+      client = await pool.connect();
+      await client.query("BEGIN");
+      // Serialize competing first-admin attempts; only one can succeed.
+      await client.query("SELECT pg_advisory_xact_lock(71020261029)");
+      const admins = await client.query<{ count: string }>(
+        "SELECT COUNT(*)::text AS count FROM fp_users WHERE role = 'admin'"
+      );
+      if (admins.rows[0]?.count !== "0") {
+        await client.query("ROLLBACK");
+        sendJson(res, 409, { error: "ADMIN_ALREADY_BOOTSTRAPPED" });
+        return;
+      }
+      const promoted = await client.query<{ id: string }>(
+        "UPDATE fp_users SET role = 'admin' WHERE auth_subject = $1 AND status = 'active' RETURNING id",
+        [auth.subject]
+      );
+      if (promoted.rowCount !== 1) {
+        await client.query("ROLLBACK");
+        sendJson(res, 404, { error: "ACTIVE_LINKED_CUSTOMER_PROFILE_REQUIRED" });
+        return;
+      }
+      await client.query(
+        "INSERT INTO fp_admin_audit_events (user_id, auth_subject, action) VALUES ($1, $2, 'first_admin_bootstrap')",
+        [promoted.rows[0].id, auth.subject]
+      );
+      await client.query("COMMIT");
+      sendJson(res, 200, { status: "admin_bootstrapped", role: "admin", financial_actions: "disabled" });
+    } catch (error) {
+      if (client) {
+        try { await client.query("ROLLBACK"); } catch { /* transaction may already be closed */ }
+      }
+      console.error("FlowPay admin bootstrap failed:", error instanceof Error ? error.message : "unknown error");
+      sendJson(res, 503, { error: "ADMIN_BOOTSTRAP_UNAVAILABLE" });
+    } finally {
+      client?.release();
     }
     return;
   }

@@ -422,7 +422,7 @@ const server = createServer(async (req, res) => {
   if (req.method === "GET" && pathname === "/") {
     sendJson(res, 200, { service: "flowpay-api", status: "ok", endpoints: [
       "/health", "/ready", "/v1/me/profile", "/v1/me/accounts", "/v1/me/summary",
-      "/v1/me/transactions", "/v1/me/cards", "/v1/me/card-events"
+      "/v1/me/transactions", "/v1/me/cards", "/v1/me/card-events", "/v1/me/bootstrap"
     ]});
     return;
   }
@@ -569,6 +569,69 @@ const server = createServer(async (req, res) => {
     await handlePasskeyRoute(req, res, pool, customer, pathname);
     return;
   }
+  // Idempotently create the authenticated customer's FlowPay profile and internal NGN ledger account.
+  // This does NOT create or imply a provider-issued bank account number.
+  if (pathname === "/v1/me/bootstrap") {
+    if (req.method !== "POST") {
+      res.setHeader("Allow", "POST, OPTIONS");
+      sendJson(res, 405, { error: "METHOD_NOT_ALLOWED" });
+      return;
+    }
+    const auth = await authenticate(req);
+    if ("error" in auth) { authError(res, auth.error); return; }
+    if (!pool) { sendJson(res, 503, { error: "DATABASE_NOT_CONFIGURED" }); return; }
+    let client;
+    try {
+      client = await pool.connect();
+      await client.query("BEGIN");
+      const userResult = await client.query<{ id: string; status: string; email: string | null }>(
+        `INSERT INTO fp_users (auth_subject, status)
+         VALUES ($1, 'active')
+         ON CONFLICT (auth_subject) WHERE auth_subject IS NOT NULL
+         DO UPDATE SET auth_subject = EXCLUDED.auth_subject
+         RETURNING id, status, email`,
+        [auth.subject]
+      );
+      const user = userResult.rows[0];
+      if (!user || user.status !== "active") {
+        await client.query("ROLLBACK");
+        sendJson(res, 403, { error: "CUSTOMER_PROFILE_INACTIVE" });
+        return;
+      }
+      // Serialize account creation per user; repeated calls remain safe.
+      await client.query("SELECT id FROM fp_users WHERE id = $1 FOR UPDATE", [user.id]);
+      const accountResult = await client.query<{ id: string }>(
+        "SELECT id FROM fp_accounts WHERE user_id = $1 AND account_type = 'customer' AND currency = 'NGN' ORDER BY created_at, id LIMIT 1",
+        [user.id]
+      );
+      let accountId = accountResult.rows[0]?.id;
+      let accountCreated = false;
+      if (!accountId) {
+        const created = await client.query<{ id: string }>(
+          "INSERT INTO fp_accounts (user_id, account_type, currency, status) VALUES ($1, 'customer', 'NGN', 'active') RETURNING id",
+          [user.id]
+        );
+        accountId = created.rows[0].id;
+        accountCreated = true;
+      }
+      await client.query("COMMIT");
+      sendJson(res, accountCreated ? 201 : 200, {
+        status: "profile_ready",
+        profile: { id: user.id, status: user.status },
+        account: { id: accountId, currency: "NGN", status: "active" },
+        bank_account_assignment: "pending_provider_integration",
+        real_bank_account_number_available: false
+      });
+    } catch (error) {
+      if (client) await client.query("ROLLBACK").catch(() => undefined);
+      console.error("FlowPay customer bootstrap failed:", error instanceof Error ? error.message : "unknown error");
+      sendJson(res, 503, { error: "CUSTOMER_BOOTSTRAP_UNAVAILABLE" });
+    } finally {
+      client?.release();
+    }
+    return;
+  }
+
   if (pathname.startsWith("/v1/me/")) {
     if (!["GET", "OPTIONS"].includes(req.method ?? "")) { sendJson(res, 405, { error: "METHOD_NOT_ALLOWED", financial_actions: "disabled" }); return; }
     await handleProtected(req, res, pathname, url);

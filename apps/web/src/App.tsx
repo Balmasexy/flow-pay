@@ -862,18 +862,18 @@ export default function App() {
                 <div><strong>Verified account details only</strong><p>This page does not convert an internal FlowPay account ID into a bank account number. Bank account details appear only when a verified provider assignment is available from the backend.</p></div>
               </section>
               <section className="panel">
-                <div className="panel-heading"><div><h2>View account number</h2><p>Your account and bank-assignment status</p></div><Building2 size={20} /></div>
+                <div className="panel-heading"><div><h2>View account number</h2><p>Your account and bank-assignment status</p></div><button className="refresh-button" disabled={customerLoading} onClick={() => { void loadCustomerData("View Account Number"); }}>{customerLoading ? "Refreshing…" : "Refresh details"}</button></div>
                 {accounts.length ? accounts.map((account) => <article className="account-number-card" key={account.id}>
-                  <div className="account-number-card-top"><div className="feature-icon"><Building2 size={22} /></div><span className={account.status === "active" ? "status-ok" : "status-error"}>{account.status}</span></div>
+                  <div className="account-number-card-top"><div className="feature-icon"><Building2 size={22} /></div><span className={account.status === "active" ? "status-ok" : account.status === "pending" ? "status-wait" : "status-error"}>{account.status || "Status not returned"}</span></div>
                   <span className="account-number-label">{account.currency} account</span>
                   <strong className="account-number-value">Not available</strong>
-                  <p className="account-number-help">A bank account number/provider assignment is not included in the current account API response.</p>
+                  <p className="account-number-help">Provider assignment: pending integration. A real bank account number is not currently available from the API. Do not use the internal account reference for bank transfers or deposits.</p>
                   <div className="account-number-meta"><span>Internal account reference</span><code>{account.id}</code></div>
                   <div className="account-number-meta"><span>Currency</span><strong>{account.currency}</strong></div>
                   <div className="account-number-meta"><span>Ledger status</span><strong>{account.status}</strong></div>
                   <div className="account-number-meta"><span>Posted ledger balance</span><strong>{formatMinor(account.ledger_balance_minor, account.currency)}</strong></div>
                 </article>) : <div className="empty-state"><div className="empty-icon"><Building2 size={23} /></div><strong>{customerLoading ? "Loading account details…" : "Account details unavailable"}</strong><span>{customerMessage}</span></div>}
-                <button className="refresh-button" onClick={() => { void loadCustomerData("View Account Number"); }}>Refresh account details</button>
+                <p className="connection-help" role="status">{customerLoading ? "Checking account details…" : accounts.length ? "Account details reflect the latest successful customer API load. Provider assignment remains unavailable until a verified provider response is integrated." : customerMessage}</p>
               </section>
               <button className="feature-button account-back-button" onClick={() => { setPage("Customer Profile"); window.sessionStorage.setItem("flowpay.currentPage", "Customer Profile"); }}>Back to customer profile</button>
             </section>

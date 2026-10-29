@@ -709,14 +709,18 @@ export default function App() {
                   <div><h2>Card activity and history</h2><p>Issuance, status changes, and card transactions when verified services are connected</p></div>
                   <Clock3 size={20} />
                 </div>
-                <div className="card-history-status">
+                <div className="card-history-status" role="status">
                   <span className="status-dot" />
-                  <div><strong>{cardEvents.length ? `${cardEvents.length} card audit events loaded` : "No verified card history available"}</strong><p>{cardEvents.length ? "Events are read-only and scoped to the signed-in customer." : customerMessage}</p></div>
+                  <div><strong>{customerLoading ? "Loading card history…" : cardEvents.length ? `${cardEvents.length} card audit events loaded` : "No verified card history available"}</strong><p>{cardEvents.length ? "Events are read-only and scoped to the signed-in customer." : customerMessage}</p></div>
                 </div>
                 {cardEvents.map((event) => <div className="transaction-row" key={event.id}>
                   <span className="transaction-symbol"><ShieldCheck size={18} /></span>
                   <div className="transaction-copy"><strong>{event.event_type}</strong><span>{formatDate(event.created_at)} · {event.outcome}</span></div>
                 </div>)}
+                <div className="history-footer">
+                  <p>Card events are read-only. Issuance, freeze, and PIN changes are not available from this preview.</p>
+                  <button className="refresh-button" disabled={customerLoading} onClick={() => { void loadCustomerData("Cards"); }}>Refresh card history</button>
+                </div>
                 <button className="feature-button" onClick={() => {
                   setActivityFilter("cards");
                   setPage("Activity");

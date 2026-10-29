@@ -84,7 +84,7 @@ function LandingPage() {
           <div className="landing-visual" aria-label="Illustration of a financial overview dashboard">
             <div className="landing-orbit landing-orbit-one" /><div className="landing-orbit landing-orbit-two" />
             <div className="landing-preview-card">
-              <div className="landing-preview-top"><span className="landing-preview-logo"><span>F</span> flowpay</span><span className="landing-live-label"><i /> Workspace preview</span></div>
+              <div className="landing-preview-top"><span className="landing-preview-logo"><span>F</span> flowpay</span><span className="landing-live-label"><i /> Financial overview</span></div>
               <div className="landing-preview-label">YOUR FINANCIAL OVERVIEW</div>
               <div className="landing-preview-title">Everything in view.</div>
               <div className="landing-preview-balance"><span>Account summary</span><strong>Verified data only</strong><small>Figures appear when securely available.</small></div>
@@ -110,7 +110,7 @@ function LandingPage() {
 
         <section className="landing-bottom-cta"><div><span className="landing-section-kicker">A BETTER VIEW STARTS HERE</span><h2>Bring your financial picture into focus.</h2><p>Open the FlowPay workspace to explore the current experience and its available features.</p></div><a className="landing-cta landing-cta-large" href="/login">Open FlowPay <ArrowRight size={18} /></a></section>
       </main>
-      <footer className="landing-footer"><a className="landing-brand" href="/"><span className="landing-brand-mark">F</span><span>flow<span>pay</span></span></a><span>© {new Date().getFullYear()} FlowPay</span><span>Independent product · Development preview</span></footer>
+      <footer className="landing-footer"><a className="landing-brand" href="/"><span className="landing-brand-mark">F</span><span>flow<span>pay</span></span></a><span>© {new Date().getFullYear()} FlowPay</span><span>Your financial workspace</span></footer>
     </div>
   );
 }
@@ -161,7 +161,7 @@ function AuthPage({ mode }: { mode: "login" | "signup" }) {
             signal: AbortSignal.timeout(10000)
           });
           if (!bootstrap.ok) {
-            setMessage("Sign-up was accepted. Your FlowPay profile will be created after you verify your email and sign in. A real bank account number is shown only after an approved provider assigns one.");
+            setMessage("Sign-up was accepted. Your FlowPay profile will be created after you verify your email and sign in. A bank account number appears only after an approved provider assigns it.");
           } else {
             setMessage("Your FlowPay profile and internal NGN account are ready. A real bank account number will appear after an approved provider assigns it; no placeholder number is used.");
           }
@@ -213,7 +213,7 @@ function AuthPage({ mode }: { mode: "login" | "signup" }) {
           <p className="auth-legal">By continuing, you agree to use FlowPay responsibly. Do not share your password or authentication codes.</p>
         </div>
       </section>
-      <footer className="auth-footer">© {new Date().getFullYear()} FlowPay · Development preview</footer>
+      <footer className="auth-footer">© {new Date().getFullYear()} FlowPay</footer>
     </main>
   );
 }
@@ -900,8 +900,8 @@ export default function App() {
               <section className="notice">
                 <div className="notice-icon"><ShieldCheck size={21} /></div>
                 <div>
-                  <strong>History is read-only and not connected yet</strong>
-                  <p>Activity will only show records returned by authenticated, ledger-backed APIs. Card events and transfer records are not fabricated or inferred from dashboard status.</p>
+                  <strong>Your activity</strong>
+                  <p>Review transaction history and card events returned by your authenticated account. Transfer records appear only when the API provides them.</p>
                 </div>
               </section>
               <section className="panel activity-history-panel">
@@ -948,7 +948,7 @@ export default function App() {
           )}
           <footer>
             <span>© {new Date().getFullYear()} FlowPay</span>
-            <span>Independent product · Development preview</span>
+            <span>Your financial workspace</span>
           </footer>
         </div>
       </main>

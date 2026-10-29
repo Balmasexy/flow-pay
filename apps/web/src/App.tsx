@@ -740,7 +740,7 @@ export default function App() {
                   <h2>Before money can move</h2>
                   <p>Every step below must be implemented and verified on the server. A dashboard status alone never authorizes a payment.</p>
                 </div>
-                <span className="locked-pill"><ShieldCheck size={14} /> Transfers disabled</span>
+                <span className="locked-pill" role="status" aria-label="Live transfers disabled"><ShieldCheck size={14} /> Live transfers disabled</span>
               </section>
 
               <section className="workflow-grid" aria-label="Transfer security requirements">
@@ -774,7 +774,7 @@ export default function App() {
                 <div className="transfer-lock-icon"><ShieldCheck size={22} /></div>
                 <div className="transfer-lock-copy">
                   <h2>Transfer action unavailable</h2>
-                  <p>There is no active transfer endpoint in this API. The control below is intentionally disabled; no real transfer can be initiated from this screen.</p>
+                  <p>No live provider-backed transfer flow is enabled. Any development/simulated transfer path is not a real bank transfer and does not authorize customer funds to move. This control remains disabled until provider approval, recipient verification, ledger safeguards, idempotency, and reconciliation are verified end-to-end.</p>
                 </div>
                 <button className="feature-button transfer-disabled-button" disabled aria-disabled="true">Transfers not available</button>
               </section>

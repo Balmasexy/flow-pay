@@ -153,7 +153,21 @@ function AuthPage({ mode }: { mode: "login" | "signup" }) {
         throw new Error(detail);
       }
       if (isSignup) {
-        setMessage("Registration request submitted. If email verification is enabled, check your inbox to verify your address, then sign in. Your financial profile and account are not created automatically by this form.");
+        const token = await getAccessToken();
+        if (token) {
+          const bootstrap = await fetch(`${API_URL}/v1/me/bootstrap`, {
+            method: "POST",
+            headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+            signal: AbortSignal.timeout(10000)
+          });
+          if (!bootstrap.ok) {
+            setMessage("Sign-up was accepted. Your FlowPay profile will be created after you verify your email and sign in. A real bank account number is shown only after an approved provider assigns one.");
+          } else {
+            setMessage("Your FlowPay profile and internal NGN account are ready. A real bank account number will appear after an approved provider assigns it; no placeholder number is used.");
+          }
+        } else {
+          setMessage("Registration request submitted. If email verification is enabled, verify your address and sign in. FlowPay will create your profile and internal NGN account automatically; a real bank account number requires an approved provider assignment.");
+        }
         setPassword("");
       } else {
         const token = await getAccessToken();
@@ -309,6 +323,23 @@ export default function App() {
     if (target === "Transfers") return;
     setCustomerLoading(true);
     try {
+      // First authenticated visit provisions only the internal customer profile/account.
+      // Bank account numbers remain unavailable until a provider returns a verified assignment.
+      const bootstrapToken = await getAccessToken();
+      if (bootstrapToken) {
+        const bootstrap = await fetch(`${API_URL}/v1/me/bootstrap`, {
+          method: "POST",
+          headers: { Accept: "application/json", Authorization: `Bearer ${bootstrapToken}` },
+          cache: "no-store",
+          signal: AbortSignal.timeout(10000)
+        });
+        if (!bootstrap.ok) {
+          const result: unknown = await bootstrap.json().catch(() => ({}));
+          const code = typeof result === "object" && result !== null && "error" in result
+            ? String((result as { error: unknown }).error) : `HTTP ${bootstrap.status}`;
+          throw new Error(code);
+        }
+      }
       if (target === "Overview") {
         const [summary, history] = await Promise.all([
           apiGet<{ totals: SummaryTotal[] }>("/v1/me/summary"),
@@ -415,6 +446,7 @@ export default function App() {
             <button
               key={name}
               className={`nav-item ${page === name ? "nav-active" : ""}`}
+              aria-current={page === name ? "page" : undefined}
               onClick={() => {
                 setPage(name);
                 window.sessionStorage.setItem("flowpay.currentPage", name);
@@ -490,9 +522,10 @@ export default function App() {
             </div>
             <button
               className="refresh-button"
-              onClick={() => { void checkApi(); }}
-              aria-label="Refresh FlowPay"
-              title="Refresh API and database connection status without reloading the page"
+              onClick={() => { void Promise.all([checkApi(), loadCustomerData(page)]); }}
+              aria-label={`Refresh ${page} and connection status`}
+              title={`Refresh ${page} data and API/database connection status`}
+              disabled={customerLoading}
             >
               <RefreshCw size={16} /> Refresh
             </button>
@@ -676,14 +709,18 @@ export default function App() {
                   <div><h2>Card activity and history</h2><p>Issuance, status changes, and card transactions when verified services are connected</p></div>
                   <Clock3 size={20} />
                 </div>
-                <div className="card-history-status">
+                <div className="card-history-status" role="status">
                   <span className="status-dot" />
-                  <div><strong>{cardEvents.length ? `${cardEvents.length} card audit events loaded` : "No verified card history available"}</strong><p>{cardEvents.length ? "Events are read-only and scoped to the signed-in customer." : customerMessage}</p></div>
+                  <div><strong>{customerLoading ? "Loading card history…" : cardEvents.length ? `${cardEvents.length} card audit events loaded` : "No verified card history available"}</strong><p>{cardEvents.length ? "Events are read-only and scoped to the signed-in customer." : customerMessage}</p></div>
                 </div>
                 {cardEvents.map((event) => <div className="transaction-row" key={event.id}>
                   <span className="transaction-symbol"><ShieldCheck size={18} /></span>
                   <div className="transaction-copy"><strong>{event.event_type}</strong><span>{formatDate(event.created_at)} · {event.outcome}</span></div>
                 </div>)}
+                <div className="history-footer">
+                  <p>Card events are read-only. Issuance, freeze, and PIN changes are not available from this preview.</p>
+                  <button className="refresh-button" disabled={customerLoading} onClick={() => { void loadCustomerData("Cards"); }}>Refresh card history</button>
+                </div>
                 <button className="feature-button" onClick={() => {
                   setActivityFilter("cards");
                   setPage("Activity");
@@ -707,7 +744,7 @@ export default function App() {
                   <h2>Before money can move</h2>
                   <p>Every step below must be implemented and verified on the server. A dashboard status alone never authorizes a payment.</p>
                 </div>
-                <span className="locked-pill"><ShieldCheck size={14} /> Transfers disabled</span>
+                <span className="locked-pill" role="status" aria-label="Live transfers disabled"><ShieldCheck size={14} /> Live transfers disabled</span>
               </section>
 
               <section className="workflow-grid" aria-label="Transfer security requirements">
@@ -741,7 +778,7 @@ export default function App() {
                 <div className="transfer-lock-icon"><ShieldCheck size={22} /></div>
                 <div className="transfer-lock-copy">
                   <h2>Transfer action unavailable</h2>
-                  <p>There is no active transfer endpoint in this API. The control below is intentionally disabled; no real transfer can be initiated from this screen.</p>
+                  <p>No live provider-backed transfer flow is enabled. Any development/simulated transfer path is not a real bank transfer and does not authorize customer funds to move. This control remains disabled until provider approval, recipient verification, ledger safeguards, idempotency, and reconciliation are verified end-to-end.</p>
                 </div>
                 <button className="feature-button transfer-disabled-button" disabled aria-disabled="true">Transfers not available</button>
               </section>
@@ -846,15 +883,16 @@ export default function App() {
               <section className="panel activity-history-panel">
                 <div className="panel-heading"><div><h2>{page}</h2><p>{page === "Money Received" ? "Incoming posted ledger entries" : "Outgoing posted ledger entries"}</p></div>{page === "Money Received" ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}</div>
                 <div className="history-readiness-grid">
-                  {(summaryTotals.length ? summaryTotals : []).map((total) => <div className="history-readiness-item" key={total.currency}><span>{total.currency} {page === "Money Received" ? "received" : "sent"}</span><strong>{formatMinor(page === "Money Received" ? total.money_received_minor : total.money_sent_minor, total.currency)}</strong></div>)}
+                  {summaryTotals.map((total) => <div className="history-readiness-item" key={total.currency}><span>{total.currency} {page === "Money Received" ? "received" : "sent"}</span><strong>{formatMinor(page === "Money Received" ? total.money_received_minor : total.money_sent_minor, total.currency)}</strong></div>)}
                 </div>
+                {!summaryTotals.length && !customerLoading && <p className="connection-help">Verified totals are unavailable. Check the signed-in session and API/database readiness before relying on this view.</p>}
                 {transactions.map((tx) => <div className="transaction-row" key={tx.id + tx.currency}>
                   <span className="transaction-symbol">{page === "Money Received" ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}</span>
                   <div className="transaction-copy"><strong>{tx.description || tx.transaction_type}</strong><span>{formatDate(tx.created_at)} · {tx.status} · {tx.currency}</span></div>
                   <strong className="transaction-amount">{formatMinor(String(Math.abs(Number(tx.amount_minor))), tx.currency)}</strong>
                 </div>)}
-                {!transactions.length && <div className="empty-state"><div className="empty-icon"><Clock3 size={23} /></div><strong>{customerLoading ? "Loading ledger records…" : "No verified records available"}</strong><span>{customerMessage}</span></div>}
-                <div className="history-footer"><p>{customerMessage}</p><button className="refresh-button" onClick={() => { void loadCustomerData(page); }}>Refresh history</button></div>
+                {!transactions.length && <div className="empty-state" role="status"><div className="empty-icon"><Clock3 size={23} /></div><strong>{customerLoading ? "Loading ledger records…" : "No verified records available"}</strong><span>{customerMessage}</span></div>}
+                <div className="history-footer"><p role="status">{customerMessage}</p><button className="refresh-button" disabled={customerLoading} onClick={() => { void loadCustomerData(page); }}>Refresh history</button></div>
               </section>
             </section>
           ) : (
@@ -881,7 +919,7 @@ export default function App() {
                 <div className="history-readiness-grid">
                   <div className="history-readiness-item"><span>API connection</span><strong className={apiStatus === "connected" ? "status-ok" : apiStatus === "checking" ? "status-wait" : "status-error"}>{apiStatus === "connected" ? "Connected" : apiStatus === "checking" ? "Checking" : "Unavailable"}</strong></div>
                   <div className="history-readiness-item"><span>Database readiness</span><strong className={databaseStatus === "connected" ? "status-ok" : databaseStatus === "checking" ? "status-wait" : "status-error"}>{databaseStatus === "connected" ? "Connected" : databaseStatus === "checking" ? "Checking" : databaseStatus === "not_configured" ? "Not configured" : databaseStatus === "schema_incomplete" ? "Schema incomplete" : "Unavailable"}</strong></div>
-                  <div className="history-readiness-item"><span>Selected view</span><strong>{activityFilter === "all" ? "All activity" : activityFilter === "transfers" ? "Transfers" : "Card activity"}</strong></div>
+                  <div className="history-readiness-item"><span>Selected view</span><strong>{activityFilter === "all" ? "All activity" : activityFilter === "received" ? "Money received" : activityFilter === "sent" ? "Money sent" : activityFilter === "transfers" ? "Transfers" : "Card activity"}</strong></div>
                 </div>
                 <div className="history-empty-state">
                   <div className="empty-icon">{activityFilter === "cards" ? <CreditCard size={23} /> : activityFilter === "transfers" ? <ArrowLeftRight size={23} /> : <Clock3 size={23} />}</div>
@@ -903,7 +941,7 @@ export default function App() {
                 </div>)}
                 <div className="history-footer">
                   <p>{customerMessage}</p>
-                  <button className="refresh-button" onClick={() => { void checkApi(); void loadCustomerData(page); }}>Refresh data</button>
+                  <button className="refresh-button" disabled={customerLoading} onClick={() => { void checkApi(); void loadCustomerData(page); }}>Refresh data</button>
                 </div>
               </section>
             </section>

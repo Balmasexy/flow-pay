@@ -1096,3 +1096,47 @@ footer { border-top-color: #ded6ca; color: #716b62; }
   html, body, .app-shell, .main { color-scheme: light; }
 }
 
+/* Lime accent dashboard theme */
+/* Soft, low-glare lime surfaces; retain orange FlowPay branding as a secondary accent. */
+:root {
+  --lime-50: #f5f9e9;
+  --lime-100: #edf4d8;
+  --lime-200: #dce9b9;
+  --lime-700: #4d641f;
+}
+html, body, .app-shell, .main {
+  background: #f2f6e8;
+}
+.topbar {
+  background: #f7faeff2;
+  border-bottom-color: #dce6c8;
+}
+.icon-button, .refresh-button {
+  background: #f8faef;
+  border-color: #dce6c8;
+}
+.stat-card, .panel, .feature-card, .quick-action,
+.dashboard-stat-grid .stat-card,
+.dashboard-quick-actions .quick-action,
+.dashboard-lower-grid > .panel,
+.card-feature-grid .feature-card {
+  background: #f9fbf2;
+  border-color: #dfe8cf;
+}
+.feature-button, .empty-state, .workflow-status {
+  background: #edf4dc;
+  border-color: #d8e5bd;
+}
+.notice {
+  background: #f0f6df;
+  border-color: #dbe8bf;
+}
+.feature-feedback {
+  background: #edf4dc;
+  border-color: #d8e5bd;
+}
+.profile, .profile-summary-panel {
+  background: #f9fbf2;
+  border-color: #dfe8cf;
+}
+

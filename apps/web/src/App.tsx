@@ -446,6 +446,7 @@ export default function App() {
             <button
               key={name}
               className={`nav-item ${page === name ? "nav-active" : ""}`}
+              aria-current={page === name ? "page" : undefined}
               onClick={() => {
                 setPage(name);
                 window.sessionStorage.setItem("flowpay.currentPage", name);
@@ -521,9 +522,10 @@ export default function App() {
             </div>
             <button
               className="refresh-button"
-              onClick={() => { void checkApi(); }}
-              aria-label="Refresh FlowPay"
-              title="Refresh API and database connection status without reloading the page"
+              onClick={() => { void Promise.all([checkApi(), loadCustomerData(page)]); }}
+              aria-label={`Refresh ${page} and connection status`}
+              title={`Refresh ${page} data and API/database connection status`}
+              disabled={customerLoading}
             >
               <RefreshCw size={16} /> Refresh
             </button>

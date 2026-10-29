@@ -153,7 +153,21 @@ function AuthPage({ mode }: { mode: "login" | "signup" }) {
         throw new Error(detail);
       }
       if (isSignup) {
-        setMessage("Registration request submitted. If email verification is enabled, check your inbox to verify your address, then sign in. Your financial profile and account are not created automatically by this form.");
+        const token = await getAccessToken();
+        if (token) {
+          const bootstrap = await fetch(`${API_URL}/v1/me/bootstrap`, {
+            method: "POST",
+            headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+            signal: AbortSignal.timeout(10000)
+          });
+          if (!bootstrap.ok) {
+            setMessage("Sign-up was accepted. Your FlowPay profile will be created after you verify your email and sign in. A real bank account number is shown only after an approved provider assigns one.");
+          } else {
+            setMessage("Your FlowPay profile and internal NGN account are ready. A real bank account number will appear after an approved provider assigns it; no placeholder number is used.");
+          }
+        } else {
+          setMessage("Registration request submitted. If email verification is enabled, verify your address and sign in. FlowPay will create your profile and internal NGN account automatically; a real bank account number requires an approved provider assignment.");
+        }
         setPassword("");
       } else {
         const token = await getAccessToken();
@@ -309,6 +323,23 @@ export default function App() {
     if (target === "Transfers") return;
     setCustomerLoading(true);
     try {
+      // First authenticated visit provisions only the internal customer profile/account.
+      // Bank account numbers remain unavailable until a provider returns a verified assignment.
+      const bootstrapToken = await getAccessToken();
+      if (bootstrapToken) {
+        const bootstrap = await fetch(`${API_URL}/v1/me/bootstrap`, {
+          method: "POST",
+          headers: { Accept: "application/json", Authorization: `Bearer ${bootstrapToken}` },
+          cache: "no-store",
+          signal: AbortSignal.timeout(10000)
+        });
+        if (!bootstrap.ok) {
+          const result: unknown = await bootstrap.json().catch(() => ({}));
+          const code = typeof result === "object" && result !== null && "error" in result
+            ? String((result as { error: unknown }).error) : `HTTP ${bootstrap.status}`;
+          throw new Error(code);
+        }
+      }
       if (target === "Overview") {
         const [summary, history] = await Promise.all([
           apiGet<{ totals: SummaryTotal[] }>("/v1/me/summary"),

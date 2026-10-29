@@ -915,7 +915,7 @@ export default function App() {
                 <div className="history-readiness-grid">
                   <div className="history-readiness-item"><span>API connection</span><strong className={apiStatus === "connected" ? "status-ok" : apiStatus === "checking" ? "status-wait" : "status-error"}>{apiStatus === "connected" ? "Connected" : apiStatus === "checking" ? "Checking" : "Unavailable"}</strong></div>
                   <div className="history-readiness-item"><span>Database readiness</span><strong className={databaseStatus === "connected" ? "status-ok" : databaseStatus === "checking" ? "status-wait" : "status-error"}>{databaseStatus === "connected" ? "Connected" : databaseStatus === "checking" ? "Checking" : databaseStatus === "not_configured" ? "Not configured" : databaseStatus === "schema_incomplete" ? "Schema incomplete" : "Unavailable"}</strong></div>
-                  <div className="history-readiness-item"><span>Selected view</span><strong>{activityFilter === "all" ? "All activity" : activityFilter === "transfers" ? "Transfers" : "Card activity"}</strong></div>
+                  <div className="history-readiness-item"><span>Selected view</span><strong>{activityFilter === "all" ? "All activity" : activityFilter === "received" ? "Money received" : activityFilter === "sent" ? "Money sent" : activityFilter === "transfers" ? "Transfers" : "Card activity"}</strong></div>
                 </div>
                 <div className="history-empty-state">
                   <div className="empty-icon">{activityFilter === "cards" ? <CreditCard size={23} /> : activityFilter === "transfers" ? <ArrowLeftRight size={23} /> : <Clock3 size={23} />}</div>
@@ -937,7 +937,7 @@ export default function App() {
                 </div>)}
                 <div className="history-footer">
                   <p>{customerMessage}</p>
-                  <button className="refresh-button" onClick={() => { void checkApi(); void loadCustomerData(page); }}>Refresh data</button>
+                  <button className="refresh-button" disabled={customerLoading} onClick={() => { void checkApi(); void loadCustomerData(page); }}>Refresh data</button>
                 </div>
               </section>
             </section>

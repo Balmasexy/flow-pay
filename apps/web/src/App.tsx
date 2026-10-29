@@ -803,12 +803,12 @@ export default function App() {
               </section>
 
               <section className="panel profile-summary-panel">
-                <div className="panel-heading"><div><h2>Registration details</h2><p>Details currently returned by your FlowPay profile</p></div><UserRoundCheck size={20} /></div>
+                <div className="panel-heading"><div><h2>Registration details</h2><p>Details currently returned by your FlowPay profile</p></div><button className="refresh-button" disabled={customerLoading} onClick={() => { void loadCustomerData("Customer Profile"); }}>{customerLoading ? "Refreshing…" : "Refresh profile"}</button></div>
                 {profile ? <div className="profile-detail-grid">
-                  <div><span>Customer reference</span><strong>{profile.id}</strong></div>
-                  <div><span>Registered email</span><strong>{profile.email || "Not provided"}</strong></div>
-                  <div><span>Account status</span><strong className={profile.status === "active" ? "status-ok" : "status-error"}>{profile.status}</strong></div>
-                  <div><span>Registration date</span><strong>{formatDate(profile.created_at)}</strong></div>
+                  <div><span>Customer reference</span><strong>{profile.id || "Unavailable"}</strong></div>
+                  <div><span>Registered email</span><strong>{profile.email || "Not provided by profile API"}</strong></div>
+                  <div><span>Account status</span><strong className={profile.status === "active" ? "status-ok" : profile.status ? "status-error" : "status-wait"}>{profile.status || "Not returned"}</strong></div>
+                  <div><span>Registration date</span><strong>{profile.created_at ? formatDate(profile.created_at) : "Not returned"}</strong></div>
                 </div> : <div className="empty-state"><div className="empty-icon"><UserRound size={23} /></div><strong>{customerLoading ? "Loading registration details…" : "Registration details unavailable"}</strong><span>{customerMessage}</span></div>}
                 <div className="registration-unavailable">
                   <strong>Additional registration fields</strong>

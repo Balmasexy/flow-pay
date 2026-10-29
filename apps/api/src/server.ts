@@ -268,9 +268,157 @@ const server = createServer(async (req, res) => {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-FlowPay-Bootstrap-Token");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, Idempotency-Key, X-FlowPay-Bootstrap-Token");
   }
   if (req.method === "OPTIONS") { res.writeHead(204); res.end(); return; }
+
+  // Development-only ledger simulation. Never calls OPay or any payment provider.
+  if (req.method === "POST" && pathname === "/dev/simulated-transfers/opay") {
+    if (process.env.NODE_ENV !== "development" || process.env.FLOWPAY_SIMULATED_TRANSFERS_ENABLED !== "true") {
+      sendJson(res, 404, { error: "NOT_FOUND" });
+      return;
+    }
+    const auth = await authenticate(req);
+    if ("error" in auth) { authError(res, auth.error); return; }
+    if (!pool) { sendJson(res, 503, { error: "DATABASE_NOT_CONFIGURED" }); return; }
+    const idempotencyKey = req.headers["idempotency-key"];
+    if (typeof idempotencyKey !== "string" || idempotencyKey.length < 8 || idempotencyKey.length > 200) {
+      sendJson(res, 400, { error: "INVALID_IDEMPOTENCY_KEY" }); return;
+    }
+    let rawBody = "";
+    try {
+      for await (const chunk of req) {
+        rawBody += chunk.toString("utf8");
+        if (rawBody.length > 4096) {
+          sendJson(res, 413, { error: "REQUEST_TOO_LARGE" }); return;
+        }
+      }
+    } catch {
+      sendJson(res, 400, { error: "INVALID_REQUEST_BODY" }); return;
+    }
+    let body: unknown;
+    try { body = JSON.parse(rawBody); }
+    catch { sendJson(res, 400, { error: "INVALID_JSON" }); return; }
+    if (typeof body !== "object" || body === null) {
+      sendJson(res, 400, { error: "INVALID_REQUEST_BODY" }); return;
+    }
+    const input = body as { accountId?: unknown; amountMinor?: unknown; destinationAccount?: unknown };
+    if (typeof input.accountId !== "string" ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.accountId) ||
+      typeof input.amountMinor !== "string" || !/^[1-9][0-9]{0,11}$/.test(input.amountMinor) ||
+      typeof input.destinationAccount !== "string" || !/^[0-9]{10}$/.test(input.destinationAccount)) {
+      sendJson(res, 400, { error: "INVALID_TRANSFER_FIELDS", details: "Provide accountId, positive amountMinor in kobo as a string, and a 10-digit simulated OPay account number." });
+      return;
+    }
+    const amount = BigInt(input.amountMinor);
+    if (amount > 100_000_000_000n) {
+      sendJson(res, 400, { error: "AMOUNT_EXCEEDS_SIMULATION_LIMIT" }); return;
+    }
+    let customer: Customer | null;
+    try { customer = await getCustomer(auth.subject); }
+    catch (error) {
+      sendJson(res, error instanceof Error && error.message === "CUSTOMER_PROFILE_INACTIVE" ? 403 : 503,
+        { error: error instanceof Error && error.message === "CUSTOMER_PROFILE_INACTIVE" ? "CUSTOMER_PROFILE_INACTIVE" : "CUSTOMER_DATA_UNAVAILABLE" });
+      return;
+    }
+    if (!customer) { sendJson(res, 404, { error: "CUSTOMER_PROFILE_NOT_FOUND" }); return; }
+
+    const client = await pool.connect().catch(() => null);
+    if (!client) { sendJson(res, 503, { error: "DATABASE_UNAVAILABLE" }); return; }
+    try {
+      await client.query("BEGIN");
+      const accountResult = await client.query(
+        "SELECT id, currency, status FROM fp_accounts WHERE id = $1 AND user_id = $2 AND account_type = 'customer' FOR UPDATE",
+        [input.accountId, customer.id]
+      );
+      const account = accountResult.rows[0] as { id: string; currency: string; status: string } | undefined;
+      if (!account) {
+        await client.query("ROLLBACK");
+        sendJson(res, 403, { error: "ACCOUNT_NOT_OWNED" }); return;
+      }
+      if (account.status !== "active") {
+        await client.query("ROLLBACK");
+        sendJson(res, 403, { error: "ACCOUNT_NOT_ACTIVE" }); return;
+      }
+      if (String(account.currency).trim() !== "NGN") {
+        await client.query("ROLLBACK");
+        sendJson(res, 400, { error: "ACCOUNT_CURRENCY_MUST_BE_NGN" }); return;
+      }
+
+      const replay = await client.query(
+        `SELECT t.id, t.status, t.transaction_type, d.destination_account,
+                COALESCE(-SUM(e.amount_minor) FILTER (WHERE e.account_id = $2), 0)::text AS amount_minor
+         FROM fp_ledger_transactions t
+         JOIN fp_ledger_entries e ON e.transaction_id = t.id
+         JOIN fp_accounts a ON a.id = e.account_id
+         LEFT JOIN fp_simulated_transfer_details d ON d.transaction_id = t.id
+         WHERE t.idempotency_key = $1 AND a.id = $2
+         GROUP BY t.id, d.destination_account`,
+        [idempotencyKey, account.id]
+      );
+      if (replay.rows.length) {
+        const previous = replay.rows[0] as { id: string; status: string; transaction_type: string; destination_account: string | null; amount_minor: string };
+        if (previous.transaction_type !== "simulated_opay_transfer" ||
+            previous.amount_minor !== input.amountMinor || previous.destination_account !== input.destinationAccount) {
+          await client.query("ROLLBACK");
+          sendJson(res, 409, { error: "IDEMPOTENCY_KEY_CONFLICT" }); return;
+        }
+        await client.query("COMMIT");
+        sendJson(res, 200, { simulated: true, transactionId: previous.id, status: previous.status, amountMinor: previous.amount_minor, currency: "NGN", destination: "OPay", replayed: true });
+        return;
+      }
+
+      const balanceResult = await client.query(
+        `SELECT COALESCE(SUM(e.amount_minor) FILTER (WHERE t.status = 'posted'), 0)::text AS balance_minor
+         FROM fp_ledger_entries e JOIN fp_ledger_transactions t ON t.id = e.transaction_id
+         WHERE e.account_id = $1`,
+        [account.id]
+      );
+      const balance = BigInt(String(balanceResult.rows[0]?.balance_minor ?? "0"));
+      if (balance < amount) {
+        await client.query("ROLLBACK");
+        sendJson(res, 409, { error: "INSUFFICIENT_FUNDS" }); return;
+      }
+      const systemResult = await client.query(
+        "SELECT id FROM fp_accounts WHERE account_type = 'system' AND currency = 'NGN' AND status = 'active' ORDER BY created_at, id LIMIT 1 FOR UPDATE"
+      );
+      const systemAccount = systemResult.rows[0] as { id: string } | undefined;
+      if (!systemAccount) {
+        await client.query("ROLLBACK");
+        sendJson(res, 503, { error: "SIMULATION_CLEARING_ACCOUNT_NOT_CONFIGURED" }); return;
+      }
+      const transactionResult = await client.query(
+        "INSERT INTO fp_ledger_transactions (idempotency_key, transaction_type, status, description) VALUES ($1, 'simulated_opay_transfer', 'pending', $2) RETURNING id",
+        [idempotencyKey, "SIMULATED OPay transfer to ****" + input.destinationAccount.slice(-4)]
+      );
+      const transactionId = String(transactionResult.rows[0].id);
+      await client.query(
+        "INSERT INTO fp_ledger_entries (transaction_id, account_id, amount_minor, currency) VALUES ($1, $2, $3, 'NGN'), ($1, $4, $5, 'NGN')",
+        [transactionId, account.id, (-amount).toString(), systemAccount.id, amount.toString()]
+      );
+      await client.query(
+        "INSERT INTO fp_simulated_transfer_details (transaction_id, destination_account, simulation_only) VALUES ($1, $2, true)",
+        [transactionId, input.destinationAccount]
+      );
+      await client.query(
+        "UPDATE fp_ledger_transactions SET status = 'posted', posted_at = now() WHERE id = $1 AND status = 'pending'",
+        [transactionId]
+      );
+      await client.query("COMMIT");
+      sendJson(res, 201, { simulated: true, transactionId, status: "posted", amountMinor: input.amountMinor, currency: "NGN", destination: "OPay", destinationLast4: input.destinationAccount.slice(-4), replayed: false });
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      if (typeof error === "object" && error !== null && "code" in error && error.code === "23505") {
+        sendJson(res, 409, { error: "IDEMPOTENCY_KEY_CONFLICT" });
+      } else {
+        console.error("FlowPay simulated transfer failed:", error instanceof Error ? error.message : "unknown error");
+        sendJson(res, 503, { error: "SIMULATED_TRANSFER_UNAVAILABLE" });
+      }
+    } finally {
+      client.release();
+    }
+    return;
+  }
   if (req.method === "GET" && pathname === "/") {
     sendJson(res, 200, { service: "flowpay-api", status: "ok", endpoints: [
       "/health", "/ready", "/v1/me/profile", "/v1/me/accounts", "/v1/me/summary",

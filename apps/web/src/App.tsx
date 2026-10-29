@@ -879,15 +879,16 @@ export default function App() {
               <section className="panel activity-history-panel">
                 <div className="panel-heading"><div><h2>{page}</h2><p>{page === "Money Received" ? "Incoming posted ledger entries" : "Outgoing posted ledger entries"}</p></div>{page === "Money Received" ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}</div>
                 <div className="history-readiness-grid">
-                  {(summaryTotals.length ? summaryTotals : []).map((total) => <div className="history-readiness-item" key={total.currency}><span>{total.currency} {page === "Money Received" ? "received" : "sent"}</span><strong>{formatMinor(page === "Money Received" ? total.money_received_minor : total.money_sent_minor, total.currency)}</strong></div>)}
+                  {summaryTotals.map((total) => <div className="history-readiness-item" key={total.currency}><span>{total.currency} {page === "Money Received" ? "received" : "sent"}</span><strong>{formatMinor(page === "Money Received" ? total.money_received_minor : total.money_sent_minor, total.currency)}</strong></div>)}
                 </div>
+                {!summaryTotals.length && !customerLoading && <p className="connection-help">Verified totals are unavailable. Check the signed-in session and API/database readiness before relying on this view.</p>}
                 {transactions.map((tx) => <div className="transaction-row" key={tx.id + tx.currency}>
                   <span className="transaction-symbol">{page === "Money Received" ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}</span>
                   <div className="transaction-copy"><strong>{tx.description || tx.transaction_type}</strong><span>{formatDate(tx.created_at)} · {tx.status} · {tx.currency}</span></div>
                   <strong className="transaction-amount">{formatMinor(String(Math.abs(Number(tx.amount_minor))), tx.currency)}</strong>
                 </div>)}
-                {!transactions.length && <div className="empty-state"><div className="empty-icon"><Clock3 size={23} /></div><strong>{customerLoading ? "Loading ledger records…" : "No verified records available"}</strong><span>{customerMessage}</span></div>}
-                <div className="history-footer"><p>{customerMessage}</p><button className="refresh-button" onClick={() => { void loadCustomerData(page); }}>Refresh history</button></div>
+                {!transactions.length && <div className="empty-state" role="status"><div className="empty-icon"><Clock3 size={23} /></div><strong>{customerLoading ? "Loading ledger records…" : "No verified records available"}</strong><span>{customerMessage}</span></div>}
+                <div className="history-footer"><p role="status">{customerMessage}</p><button className="refresh-button" disabled={customerLoading} onClick={() => { void loadCustomerData(page); }}>Refresh history</button></div>
               </section>
             </section>
           ) : (

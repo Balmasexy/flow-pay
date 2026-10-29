@@ -1140,3 +1140,16 @@ html, body, .app-shell, .main {
   border-color: #dfe8cf;
 }
 
+/* Preserve the dark Available Balance card above the general lime card surfaces. */
+.dashboard-stat-grid .balance-card {
+  color: #fff;
+  background:
+    radial-gradient(ellipse at 100% 0%, #ff963c4a 0%, transparent 42%),
+    linear-gradient(135deg, #30251e 0%, #1b1a18 72%);
+  border-color: #30251e;
+  box-shadow: 0 12px 24px #32261d1a;
+}
+.dashboard-stat-grid .balance-card .stat-top { color: #d4c8be; }
+.dashboard-stat-grid .balance-card .stat-value { color: #fff; }
+.dashboard-stat-grid .balance-card .stat-foot { color: #c4b7ac; }
+

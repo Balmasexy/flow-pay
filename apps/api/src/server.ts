@@ -268,7 +268,7 @@ const server = createServer(async (req, res) => {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-FlowPay-Bootstrap-Token");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, Idempotency-Key, X-FlowPay-Bootstrap-Token");
   }
   if (req.method === "OPTIONS") { res.writeHead(204); res.end(); return; }
 

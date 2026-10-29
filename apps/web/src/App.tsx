@@ -536,8 +536,8 @@ export default function App() {
           <section className="notice">
             <div className="notice-icon"><ShieldCheck size={21} /></div>
             <div>
-              <strong>Development preview</strong>
-              <p>FlowPay now checks the live API health and database-readiness endpoints. Account balances, cards, and transaction history remain hidden until authenticated, ledger-backed services are implemented.</p>
+              <strong>FlowPay workspace</strong>
+              <p>FlowPay checks API health and database readiness. Account balances, cards, and transaction history are shown only when authenticated services return verified records.</p>
             </div>
           </section>
 

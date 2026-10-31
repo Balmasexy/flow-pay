@@ -2,6 +2,7 @@ import { createPublicKey, timingSafeEqual, verify as verifySignature } from "nod
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { Pool } from "pg";
 import { handlePasskeyRoute } from "./passkeys.js";
+import { handleFlutterwaveDeposit, handleFlutterwaveWebhook } from "./flutterwave.js";
 
 const port = Number(process.env.PORT ?? 3000);
 const databaseUrl = process.env.DATABASE_URL?.trim();
@@ -272,6 +273,18 @@ const server = createServer(async (req, res) => {
   }
   if (req.method === "OPTIONS") { res.writeHead(204); res.end(); return; }
 
+  if (pathname === "/v1/payments/flutterwave/deposits") {
+    await handleFlutterwaveDeposit(req, res, pool, authenticate, async (subject) => {
+      const customer = await getCustomer(subject);
+      return customer ? { id: customer.id, email: customer.email } : null;
+    });
+    return;
+  }
+  if (pathname === "/webhooks/flutterwave") {
+    await handleFlutterwaveWebhook(req, res, pool);
+    return;
+  }
+
   // Development-only ledger simulation. Never calls OPay or any payment provider.
   if (req.method === "POST" && pathname === "/dev/simulated-transfers/opay") {
     if (process.env.NODE_ENV !== "development" || process.env.FLOWPAY_SIMULATED_TRANSFERS_ENABLED !== "true") {
@@ -422,7 +435,7 @@ const server = createServer(async (req, res) => {
   if (req.method === "GET" && pathname === "/") {
     sendJson(res, 200, { service: "flowpay-api", status: "ok", endpoints: [
       "/health", "/ready", "/v1/me/profile", "/v1/me/accounts", "/v1/me/summary",
-      "/v1/me/transactions", "/v1/me/cards", "/v1/me/card-events", "/v1/me/bootstrap"
+      "/v1/me/transactions", "/v1/me/cards", "/v1/me/card-events", "/v1/me/bootstrap", "/v1/payments/flutterwave/deposits", "/webhooks/flutterwave"
     ]});
     return;
   }

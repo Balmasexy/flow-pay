@@ -51,12 +51,12 @@ Keep all credentials in the FlowPay API service environment, never in the fronte
 
 ## Database
 
-Migration `006_flutterwave_test_deposits.sql` creates only FlowPay provider-reference metadata. It does not create customers, opening balances, or provider-issued bank accounts. Review and apply it only to the isolated FlowPay development/test database using the existing migration procedure.
+Migration `007_flutterwave_test_deposits.sql` creates only FlowPay provider-reference metadata. It does not create customers, opening balances, or provider-issued bank accounts. Review and apply it only to the isolated FlowPay development/test database using the existing migration procedure.
 
 ## Verification checklist
 
 1. Confirm API environment contains test-only credentials and an HTTPS FlowPay redirect.
-2. Apply migration 006 to the isolated FlowPay test database.
+2. Apply migration 007 to the isolated FlowPay test database.
 3. Confirm a customer can initialize a sandbox checkout for their own active NGN account.
 4. Confirm missing auth, foreign account IDs, invalid amounts, and missing test configuration fail closed.
 5. Complete a Flutterwave test payment and verify the provider's transaction status.

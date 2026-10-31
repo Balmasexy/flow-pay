@@ -55,7 +55,7 @@ const ROLE_PERMISSIONS: Readonly<Record<StaffRole, readonly StaffPermission[]>> 
 };
 
 export function permissionsForRole(roleCode: string | null | undefined): readonly StaffPermission[] {
-  if (!roleCode || !(roleCode in ROLE_PERMISSIONS)) return [];
+  if (!roleCode || !Object.hasOwn(ROLE_PERMISSIONS, roleCode)) return [];
   return ROLE_PERMISSIONS[roleCode as StaffRole];
 }
 

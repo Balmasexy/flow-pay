@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { ArrowLeft, RefreshCw, ShieldCheck, Users, Settings, LockKeyhole } from "lucide-react";
 
 const API_URL = (import.meta.env.VITE_API_BASE_URL || "https://flowpay-backend-qz79.onrender.com").replace(/\/$/, "");
@@ -134,7 +134,7 @@ export default function AdminConsole() {
     } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to remove staff role."); setBusy(false); }
   }
 
-  const inputStyle: React.CSSProperties = { width: "100%", minWidth: 0, border: "1px solid #deded8", borderRadius: 8, padding: "10px 11px", font: "inherit", fontSize: 13, background: "#fff" };
+  const inputStyle: CSSProperties = { width: "100%", minWidth: 0, border: "1px solid #deded8", borderRadius: 8, padding: "10px 11px", font: "inherit", fontSize: 13, background: "#fff" };
   const labelStyle: React.CSSProperties = { display: "grid", gap: 6, color: "#64655f", fontSize: 11, fontWeight: 600 };
 
   return <main style={{ minHeight: "100vh", background: "#f6f6f3", color: "#222321", padding: "24px clamp(14px, 4vw, 48px) 48px", fontFamily: '"DM Sans", sans-serif' }}>

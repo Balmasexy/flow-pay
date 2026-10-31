@@ -51,12 +51,12 @@ Keep all credentials in the FlowPay API service environment, never in the fronte
 
 ## Database
 
-Migration `007_flutterwave_test_deposits.sql` creates only FlowPay provider-reference metadata. It does not create customers, opening balances, or provider-issued bank accounts. Review and apply it only to the isolated FlowPay development/test database using the existing migration procedure.
+Migration `007_flutterwave_test_deposits.sql` creates FlowPay provider-reference metadata. Migration `008_flutterwave_ngn_clearing_account.sql` provisions one dedicated NGN system clearing account with a zero opening balance and a stable role marker. It does not create customers, customer wallet balances, or provider-issued bank accounts. The clearing account is an internal balancing account, not proof of funds held by Flutterwave. Review and apply migrations 007 and 008 only to the isolated FlowPay development/test database using the existing migration procedure.
 
 ## Verification checklist
 
 1. Confirm API environment contains test-only credentials and an HTTPS FlowPay redirect.
-2. Apply migration 007 to the isolated FlowPay test database.
+2. Apply migrations 007 and 008 to the isolated FlowPay test database.
 3. Confirm a customer can initialize a sandbox checkout for their own active NGN account.
 4. Confirm missing auth, foreign account IDs, invalid amounts, and missing test configuration fail closed.
 5. Complete a Flutterwave test payment and verify the provider's transaction status.
@@ -64,4 +64,4 @@ Migration `007_flutterwave_test_deposits.sql` creates only FlowPay provider-refe
 7. Test invalid webhook hashes, wrong currency, amount mismatch, unknown references, and provider verification outages.
 8. Confirm production credentials and live mode are absent.
 
-**Status:** Code path added on the feature branch. A successful end-to-end sandbox transaction has not yet been demonstrated; do not describe the integration as production-ready or live.
+**Status:** The dedicated clearing-account migration and exact-role lookup are now included on the feature branch. A successful end-to-end sandbox transaction has not yet been demonstrated; do not describe the integration as production-ready or live.

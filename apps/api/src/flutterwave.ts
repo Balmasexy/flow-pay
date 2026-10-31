@@ -98,7 +98,7 @@ export async function handleFlutterwaveDeposit(
       return;
     }
     const clearingResult = await client.query<{ id: string }>(
-      "SELECT id FROM fp_accounts WHERE account_type = 'system' AND currency = 'NGN' AND status = 'active' ORDER BY created_at, id LIMIT 1 FOR UPDATE"
+      "SELECT id FROM fp_accounts WHERE account_type = 'system' AND system_account_role = 'flutterwave_ngn_clearing' AND currency = 'NGN' AND status = 'active' FOR UPDATE"
     );
     const clearing = clearingResult.rows[0];
     if (!clearing) { await client.query("ROLLBACK"); json(res, 503, { error: "NGN_CLEARING_ACCOUNT_NOT_CONFIGURED" }); return; }

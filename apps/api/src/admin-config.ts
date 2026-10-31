@@ -38,6 +38,7 @@ export async function handleAdminConfigRoute(
 ): Promise<boolean> {
   if (!pathname.startsWith("/v1/admin/tiers") &&
       !pathname.startsWith("/v1/admin/roles") &&
+      pathname !== "/v1/admin/users" &&
       !/^\/v1\/admin\/users\/[0-9a-f-]{36}\/role$/i.test(pathname)) return false;
 
   if (!pool) { send(res, 503, { error: "DATABASE_NOT_CONFIGURED" }); return true; }
@@ -122,6 +123,23 @@ export async function handleAdminConfigRoute(
         await client.query("ROLLBACK").catch(() => undefined);
         throw error;
       } finally { client.release(); }
+      return true;
+    }
+
+    if (req.method === "GET" && pathname === "/v1/admin/users") {
+      const limitRaw = Number(new URL(req.url ?? "/", "http://localhost").searchParams.get("limit") ?? "100");
+      const limit = Number.isInteger(limitRaw) ? Math.max(1, Math.min(200, limitRaw)) : 100;
+      const result = await pool.query(
+        `SELECT u.id, u.email, u.status, u.role AS legacy_role, u.created_at,
+                a.role_code AS assigned_role_code, d.display_name AS assigned_role_name
+           FROM fp_users u
+           LEFT JOIN fp_user_role_assignments a ON a.user_id = u.id
+           LEFT JOIN fp_role_definitions d ON d.role_code = a.role_code
+          ORDER BY u.created_at DESC, u.id
+          LIMIT $1`,
+        [limit]
+      );
+      send(res, 200, { users: result.rows, limit, note: "Customer and staff directory; sensitive identity data is excluded." });
       return true;
     }
 

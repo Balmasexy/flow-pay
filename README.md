@@ -48,3 +48,8 @@ Configure the web build with `VITE_NEON_AUTH_URL`. Configure the API with `NEON_
 Migration `apps/api/migrations/003_customer_profile_cards.sql` is additive but **has not been applied automatically**. Review and back up the database before applying it. It creates a verified-auth-subject mapping column and stores non-sensitive card metadata; it does not automatically link any existing identity. Map a customer's verified Neon Auth subject to the correct existing FlowPay customer profile only after confirming identity.
 
 No PAN, CVV/CVC, PIN, passwords, or session tokens may be stored in card metadata or exposed by API responses. Virtual-card issuance, physical-card orders, freeze/unfreeze, PIN changes, spending-limit updates, transfers, and payments remain disabled until a provider-backed, authenticated, audited implementation is reviewed and approved.
+
+
+## Flutterwave sandbox deposits
+
+FlowPay includes a guarded Flutterwave test-mode deposit route. See [docs/FLUTTERWAVE_TEST_MODE.md](docs/FLUTTERWAVE_TEST_MODE.md) for test-only environment variables, API contract, migration 006, webhook verification, and validation checklist. The integration rejects live-mode configuration and does not use PWFB customer data or credentials. End-to-end sandbox verification is still required before considering this milestone complete.

@@ -5,6 +5,7 @@ on:
     branches:
       - feat/api-foundation
       - feat/flowpay-banking-admin-tiers
+      - feat/flowpay-super-admin-console
     paths:
       - "apps/**"
       - ".github/workflows/**"

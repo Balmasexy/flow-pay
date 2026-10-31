@@ -444,7 +444,7 @@ const server = createServer(async (req, res) => {
     return;
   }
   if (req.method === "GET" && pathname === "/ready") {
-    const requiredMigrations = ["001_core", "002_ledger_invariants", "003_customer_profile_cards", "004_passkeys_security", "005_admin_bootstrap"];
+    const requiredMigrations = ["001_core", "002_ledger_invariants", "003_customer_profile_cards", "004_passkeys_security", "005_admin_bootstrap", "006_flutterwave_test_deposits"];
     if (!pool) {
       sendJson(res, 503, { service: "flowpay-api", status: "not_ready", database: "not_configured", schema: "unknown", payments: "disabled" });
       return;

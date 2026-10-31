@@ -20,8 +20,12 @@ async function readBody(req: IncomingMessage, maxBytes = 16_384): Promise<string
 function testConfig() {
   const secretKey = process.env.FLW_SECRET_KEY?.trim() ?? "";
   const webhookHash = process.env.FLW_WEBHOOK_SECRET_HASH?.trim() ?? "";
-  if (process.env.FLUTTERWAVE_MODE !== "test" || !secretKey.startsWith("FLWSECK_TEST-") || webhookHash.length < 16) return null;
-  return { secretKey, webhookHash };
+  const redirectUrl = process.env.FLOWPAY_FLUTTERWAVE_REDIRECT_URL?.trim() ?? "";
+  let redirectIsHttps = false;
+  try { redirectIsHttps = new URL(redirectUrl).protocol === "https:"; } catch { /* invalid URL */ }
+  if (process.env.FLUTTERWAVE_MODE !== "test" || !secretKey.startsWith("FLWSECK_TEST-") ||
+      webhookHash.length < 16 || !redirectIsHttps) return null;
+  return { secretKey, webhookHash, redirectUrl };
 }
 function safeEqual(a: string, b: string) {
   const left = Buffer.from(a);
@@ -107,7 +111,7 @@ export async function handleFlutterwaveDeposit(
       headers: { Authorization: `Bearer ${config.secretKey}`, "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({
         tx_ref: txRef, amount: amountNgn.toFixed(2), currency: "NGN",
-        redirect_url: process.env.FLOWPAY_FLUTTERWAVE_REDIRECT_URL,
+        redirect_url: config.redirectUrl,
         customer: { email: customer.email },
         meta: { flowpay: true, mode: "test" },
         customizations: { title: "FlowPay", description: "FlowPay sandbox deposit" }
@@ -169,7 +173,8 @@ export async function handleFlutterwaveWebhook(req: IncomingMessage, res: Server
   } | null;
   const data = verifiedBody?.data;
   if (verifiedBody?.status !== "success" || data?.status !== "successful" || typeof data.tx_ref !== "string" ||
-      data.currency !== "NGN" || typeof data.id !== "number" || !Number.isFinite(data.amount)) {
+      data.currency !== "NGN" || typeof data.id !== "number" || data.id !== Number(providerId) ||
+      typeof data.amount !== "number" || !Number.isFinite(data.amount)) {
     json(res, 200, { received: true, credited: false, reason: "PAYMENT_NOT_VERIFIED_AS_SUCCESSFUL" }); return;
   }
   const client = await pool.connect().catch(() => null);

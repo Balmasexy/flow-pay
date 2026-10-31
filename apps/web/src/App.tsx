@@ -323,23 +323,8 @@ export default function App() {
     if (target === "Transfers") return;
     setCustomerLoading(true);
     try {
-      // First authenticated visit provisions only the internal customer profile/account.
-      // Bank account numbers remain unavailable until a provider returns a verified assignment.
-      const bootstrapToken = await getAccessToken();
-      if (bootstrapToken) {
-        const bootstrap = await fetch(`${API_URL}/v1/me/bootstrap`, {
-          method: "POST",
-          headers: { Accept: "application/json", Authorization: `Bearer ${bootstrapToken}` },
-          cache: "no-store",
-          signal: AbortSignal.timeout(10000)
-        });
-        if (!bootstrap.ok) {
-          const result: unknown = await bootstrap.json().catch(() => ({}));
-          const code = typeof result === "object" && result !== null && "error" in result
-            ? String((result as { error: unknown }).error) : `HTTP ${bootstrap.status}`;
-          throw new Error(code);
-        }
-      }
+      // Customer pages are read-only. Profile/account provisioning belongs to the explicit
+      // sign-up/bootstrap flow, never as a side effect of opening or refreshing a page.
       if (target === "Overview") {
         const [summary, history] = await Promise.all([
           apiGet<{ totals: SummaryTotal[] }>("/v1/me/summary"),

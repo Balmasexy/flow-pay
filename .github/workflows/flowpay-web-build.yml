@@ -13,8 +13,10 @@ on:
     branches:
       - feat/card-history-repair
       - feat/financial-dashboard-profile-cards
+      - feat/flutterwave-ngn-deposits
     paths:
       - "apps/web/**"
+      - "apps/api/**"
       - ".github/workflows/flowpay-web-build.yml"
 
 permissions:

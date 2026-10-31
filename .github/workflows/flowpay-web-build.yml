@@ -16,6 +16,7 @@ on:
       - feat/financial-dashboard-profile-cards
       - feat/flutterwave-ngn-deposits
       - feat/flowpay-banking-admin-tiers
+      - feat/flowpay-super-admin-console
     paths:
       - "apps/web/**"
       - "apps/api/**"

@@ -38,6 +38,7 @@ export async function handleAdminConfigRoute(
 ): Promise<boolean> {
   if (!pathname.startsWith("/v1/admin/tiers") &&
       !pathname.startsWith("/v1/admin/roles") &&
+      pathname !== "/v1/admin/users" &&
       !/^\/v1\/admin\/users\/[0-9a-f-]{36}\/role$/i.test(pathname)) return false;
 
   if (!pool) { send(res, 503, { error: "DATABASE_NOT_CONFIGURED" }); return true; }
@@ -125,6 +126,23 @@ export async function handleAdminConfigRoute(
       return true;
     }
 
+    if (req.method === "GET" && pathname === "/v1/admin/users") {
+      const limitRaw = Number(new URL(req.url ?? "/", "http://localhost").searchParams.get("limit") ?? "100");
+      const limit = Number.isInteger(limitRaw) ? Math.max(1, Math.min(200, limitRaw)) : 100;
+      const result = await pool.query(
+        `SELECT u.id, u.email, u.status, u.role AS legacy_role, u.created_at,
+                a.role_code AS assigned_role_code, d.display_name AS assigned_role_name
+           FROM fp_users u
+           LEFT JOIN fp_user_role_assignments a ON a.user_id = u.id
+           LEFT JOIN fp_role_definitions d ON d.role_code = a.role_code
+          ORDER BY u.created_at DESC, u.id
+          LIMIT $1`,
+        [limit]
+      );
+      send(res, 200, { users: result.rows, limit, note: "Customer and staff directory; sensitive identity data is excluded." });
+      return true;
+    }
+
     if (req.method === "GET" && pathname === "/v1/admin/roles") {
       const result = await pool.query(
         `SELECT d.role_code, d.display_name, d.description, d.is_assignable,
@@ -151,8 +169,8 @@ export async function handleAdminConfigRoute(
       const client = await pool.connect();
       try {
         await client.query("BEGIN");
-        const target = await client.query<{ id: string }>(
-          "SELECT id FROM fp_users WHERE id = $1 AND status = 'active' FOR UPDATE", [assignmentMatch[1]]
+        const target = await client.query<{ id: string; role: string }>(
+          "SELECT id, role FROM fp_users WHERE id = $1 AND status = 'active' FOR UPDATE", [assignmentMatch[1]]
         );
         const role = await client.query<{ role_code: string }>(
           "SELECT role_code FROM fp_role_definitions WHERE role_code = $1 AND is_assignable = TRUE", [body.roleCode]
@@ -160,6 +178,16 @@ export async function handleAdminConfigRoute(
         if (!target.rows[0] || !role.rows[0]) {
           await client.query("ROLLBACK");
           send(res, 404, { error: !target.rows[0] ? "ACTIVE_USER_NOT_FOUND" : "ASSIGNABLE_ROLE_NOT_FOUND" });
+          return true;
+        }
+        if (target.rows[0].role === "admin") {
+          await client.query("ROLLBACK");
+          send(res, 409, { error: "SUPER_ADMIN_ASSIGNMENT_PROTECTED" });
+          return true;
+        }
+        if (body.roleCode === "customer") {
+          await client.query("ROLLBACK");
+          send(res, 400, { error: "CUSTOMER_ROLE_IS_NOT_A_STAFF_ASSIGNMENT" });
           return true;
         }
         const previous = await client.query(

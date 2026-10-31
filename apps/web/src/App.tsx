@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import PasskeySecurity from "./PasskeySecurity";
+import AdminConsole from "./AdminConsole";
 import {
   ArrowDownLeft, ArrowLeftRight, ArrowRight, ArrowUpRight, Bell,
   CheckCircle2, CircleHelp, Clock3, CreditCard, Home,
@@ -410,6 +411,7 @@ export default function App() {
   ];
 
   const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
+  if (pathname === "/admin") return <AdminConsole />;
   if (pathname === "/") return <LandingPage />;
   if (pathname === "/login" || pathname === "/signin") return <AuthPage mode="login" />;
   if (pathname === "/signup" || pathname === "/register" || pathname === "/registration") return <AuthPage mode="signup" />;

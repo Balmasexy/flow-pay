@@ -274,7 +274,7 @@ const server = createServer(async (req, res) => {
   }
   if (req.method === "OPTIONS") { res.writeHead(204); res.end(); return; }
 
-  if (pathname.startsWith("/v1/admin/tiers") || pathname.startsWith("/v1/admin/roles") || /^\/v1\/admin\/users\/[0-9a-f-]{36}\/role$/i.test(pathname)) {
+  if (pathname.startsWith("/v1/admin/tiers") || pathname.startsWith("/v1/admin/roles") || pathname === "/v1/admin/users" || /^\/v1\/admin\/users\/[0-9a-f-]{36}\/role$/i.test(pathname)) {
     await handleAdminConfigRoute(req, res, pool, authenticate, pathname);
     return;
   }

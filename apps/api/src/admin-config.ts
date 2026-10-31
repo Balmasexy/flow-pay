@@ -169,8 +169,8 @@ export async function handleAdminConfigRoute(
       const client = await pool.connect();
       try {
         await client.query("BEGIN");
-        const target = await client.query<{ id: string }>(
-          "SELECT id FROM fp_users WHERE id = $1 AND status = 'active' FOR UPDATE", [assignmentMatch[1]]
+        const target = await client.query<{ id: string; role: string }>(
+          "SELECT id, role FROM fp_users WHERE id = $1 AND status = 'active' FOR UPDATE", [assignmentMatch[1]]
         );
         const role = await client.query<{ role_code: string }>(
           "SELECT role_code FROM fp_role_definitions WHERE role_code = $1 AND is_assignable = TRUE", [body.roleCode]
@@ -178,6 +178,16 @@ export async function handleAdminConfigRoute(
         if (!target.rows[0] || !role.rows[0]) {
           await client.query("ROLLBACK");
           send(res, 404, { error: !target.rows[0] ? "ACTIVE_USER_NOT_FOUND" : "ASSIGNABLE_ROLE_NOT_FOUND" });
+          return true;
+        }
+        if (target.rows[0].role === "admin") {
+          await client.query("ROLLBACK");
+          send(res, 409, { error: "SUPER_ADMIN_ASSIGNMENT_PROTECTED" });
+          return true;
+        }
+        if (body.roleCode === "customer") {
+          await client.query("ROLLBACK");
+          send(res, 400, { error: "CUSTOMER_ROLE_IS_NOT_A_STAFF_ASSIGNMENT" });
           return true;
         }
         const previous = await client.query(

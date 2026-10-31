@@ -226,6 +226,19 @@ export async function handleAdminConfigRoute(
       const client = await pool.connect();
       try {
         await client.query("BEGIN");
+        const target = await client.query<{ id: string; role: string; status: string }>(
+          "SELECT id, role, status FROM fp_users WHERE id = $1 FOR UPDATE", [assignmentMatch[1]]
+        );
+        if (!target.rows[0] || target.rows[0].status !== "active") {
+          await client.query("ROLLBACK");
+          send(res, 404, { error: "ACTIVE_USER_NOT_FOUND" });
+          return true;
+        }
+        if (target.rows[0].role === "admin") {
+          await client.query("ROLLBACK");
+          send(res, 409, { error: "SUPER_ADMIN_ASSIGNMENT_PROTECTED" });
+          return true;
+        }
         const previous = await client.query(
           "DELETE FROM fp_user_role_assignments WHERE user_id = $1 RETURNING role_code",
           [assignmentMatch[1]]

@@ -2,6 +2,7 @@ import { createPublicKey, timingSafeEqual, verify as verifySignature } from "nod
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { Pool } from "pg";
 import { handlePasskeyRoute } from "./passkeys.js";
+import { handleAdminConfigRoute } from "./admin-config.js";
 import { handleFlutterwaveDeposit, handleFlutterwaveWebhook } from "./flutterwave.js";
 
 const port = Number(process.env.PORT ?? 3000);
@@ -268,12 +269,12 @@ const server = createServer(async (req, res) => {
   if (origin && allowedOrigins.has(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, Idempotency-Key, X-FlowPay-Bootstrap-Token");
   }
   if (req.method === "OPTIONS") { res.writeHead(204); res.end(); return; }
 
-  if (pathname === "/v1/payments/flutterwave/deposits") {
+  if (pathname.startsWith("/v1/admin/tiers") || pathname.startsWith("/v1/admin/roles") || /^\\/v1\\/admin\\/users\\/[0-9a-f-]{36}\\/role$/i.test(pathname)) {\n    await handleAdminConfigRoute(req, res, pool, authenticate, pathname);\n    return;\n  }\n  if (pathname === "/v1/payments/flutterwave/deposits") {
     await handleFlutterwaveDeposit(req, res, pool, authenticate, async (subject) => {
       const customer = await getCustomer(subject);
       return customer ? { id: customer.id, email: customer.email } : null;
@@ -444,7 +445,7 @@ const server = createServer(async (req, res) => {
     return;
   }
   if (req.method === "GET" && pathname === "/ready") {
-    const requiredMigrations = ["001_core", "002_ledger_invariants", "003_customer_profile_cards", "004_passkeys_security", "005_admin_bootstrap", "006_simulated_opay_transfers", "007_flutterwave_test_deposits", "008_flutterwave_ngn_clearing_account"];
+    const requiredMigrations = ["001_core", "002_ledger_invariants", "003_customer_profile_cards", "004_passkeys_security", "005_admin_bootstrap", "006_simulated_opay_transfers", "007_flutterwave_test_deposits", "008_flutterwave_ngn_clearing_account", "009_customer_tiers_and_staff_roles"];
     if (!pool) {
       sendJson(res, 503, { service: "flowpay-api", status: "not_ready", database: "not_configured", schema: "unknown", payments: "disabled" });
       return;

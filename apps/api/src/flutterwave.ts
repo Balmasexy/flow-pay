@@ -1,4 +1,4 @@
-import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool } from "pg";
 
@@ -83,14 +83,14 @@ export async function handleFlutterwaveDeposit(
     if (!account || account.status !== "active" || account.currency.trim() !== "NGN") {
       await client.query("ROLLBACK"); json(res, 403, { error: "ACTIVE_OWNED_NGN_ACCOUNT_REQUIRED" }); return;
     }
-    const replay = await client.query<{ transaction_id: string; checkout_url: string; amount_minor: string }>(
-      `SELECT d.transaction_id, d.checkout_url, d.amount_minor::text
+    const replay = await client.query<{ transaction_id: string; checkout_url: string; amount_minor: string; account_id: string }>(
+      `SELECT d.transaction_id, d.checkout_url, d.amount_minor::text, d.account_id
        FROM fp_flutterwave_deposits d JOIN fp_ledger_transactions t ON t.id = d.transaction_id
        WHERE t.idempotency_key = $1 AND d.user_id = $2`, [idempotencyKey, customer.id]
     );
     if (replay.rows[0]) {
       const previous = replay.rows[0];
-      if (previous.amount_minor !== amountMinor.toString()) {
+      if (previous.amount_minor !== amountMinor.toString() || previous.account_id !== account.id) {
         await client.query("ROLLBACK"); json(res, 409, { error: "IDEMPOTENCY_KEY_CONFLICT" }); return;
       }
       await client.query("COMMIT");

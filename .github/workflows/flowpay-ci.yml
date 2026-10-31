@@ -72,6 +72,9 @@ jobs:
       - name: Type-check API
         run: npm run typecheck --prefix apps/api
 
+      - name: Run API unit tests
+        run: npm test --prefix apps/api
+
       - name: Smoke-test API health and safe readiness behavior
         shell: bash
         run: |

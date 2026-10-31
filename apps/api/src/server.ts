@@ -4,6 +4,7 @@ import { Pool } from "pg";
 import { handlePasskeyRoute } from "./passkeys.js";
 import { handleAdminConfigRoute } from "./admin-config.js";
 import { handleFlutterwaveDeposit, handleFlutterwaveWebhook } from "./flutterwave.js";
+import { STAFF_PERMISSIONS, hasStaffPermission } from "./staff-permissions.js";
 
 const port = Number(process.env.PORT ?? 3000);
 const databaseUrl = process.env.DATABASE_URL?.trim();
@@ -646,6 +647,45 @@ const server = createServer(async (req, res) => {
       sendJson(res, 503, { error: "CUSTOMER_BOOTSTRAP_UNAVAILABLE" });
     } finally {
       client?.release();
+    }
+    return;
+  }
+
+  // Staff self-service access snapshot. Operational routes must independently
+  // call the same permission policy before exposing or changing business data.
+  if (pathname === "/v1/staff/me/permissions") {
+    if (req.method !== "GET") { sendJson(res, 405, { error: "METHOD_NOT_ALLOWED" }); return; }
+    const auth = await authenticate(req);
+    if ("error" in auth) { authError(res, auth.error); return; }
+    if (!pool) { sendJson(res, 503, { error: "DATABASE_NOT_CONFIGURED" }); return; }
+    try {
+      const userResult = await pool.query<{ id: string; role: string }>(
+        "SELECT id, role FROM fp_users WHERE auth_subject = $1 AND status = 'active' LIMIT 1",
+        [auth.subject]
+      );
+      const user = userResult.rows[0];
+      if (!user) { sendJson(res, 403, { error: "ACTIVE_STAFF_ACCOUNT_REQUIRED" }); return; }
+      if (user.role === "admin") {
+        sendJson(res, 200, { access: "super_admin", roleCodes: ["super_admin"], permissions: ["*"], note: "Super Admin access is managed separately from staff assignments." });
+        return;
+      }
+      const assignments = await pool.query<{ role_code: string }>(
+        "SELECT role_code FROM fp_user_role_assignments WHERE user_id = $1 ORDER BY role_code",
+        [user.id]
+      );
+      const roleCodes = assignments.rows.map((row) => row.role_code);
+      if (roleCodes.length === 0) { sendJson(res, 403, { error: "STAFF_ROLE_REQUIRED" }); return; }
+      const permissions = STAFF_PERMISSIONS.filter((permission) => hasStaffPermission(roleCodes, permission));
+      sendJson(res, 200, {
+        access: "staff",
+        roleCodes,
+        permissions,
+        deniedByDefault: true,
+        financialExecutionEnabled: false
+      });
+    } catch (error) {
+      console.error("FlowPay staff access lookup failed:", error instanceof Error ? error.message : "unknown error");
+      sendJson(res, 503, { error: "STAFF_ACCESS_UNAVAILABLE" });
     }
     return;
   }

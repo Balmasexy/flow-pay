@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - feat/api-foundation
+      - feat/flowpay-banking-admin-tiers
+      - feat/flowpay-super-admin-console
     paths:
       - "apps/**"
       - ".github/workflows/**"
@@ -12,6 +14,7 @@ on:
   pull_request:
     branches:
       - feat/api-foundation
+      - feat/flutterwave-ngn-deposits
     paths:
       - "apps/**"
       - ".github/workflows/**"
@@ -68,6 +71,9 @@ jobs:
 
       - name: Type-check API
         run: npm run typecheck --prefix apps/api
+
+      - name: Run API unit tests
+        run: npm test --prefix apps/api
 
       - name: Smoke-test API health and safe readiness behavior
         shell: bash

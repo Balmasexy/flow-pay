@@ -1,0 +1,7 @@
+{
+  "name": "flowpay-render-entrypoint",
+  "private": true,
+  "scripts": {
+    "start": "npm run preview --prefix apps/web -- --host 0.0.0.0 --port ${PORT:-4173}"
+  }
+}

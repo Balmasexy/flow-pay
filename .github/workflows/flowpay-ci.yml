@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feat/api-foundation
+      - feat/flowpay-banking-admin-tiers
     paths:
       - "apps/**"
       - ".github/workflows/**"
@@ -12,6 +13,7 @@ on:
   pull_request:
     branches:
       - feat/api-foundation
+      - feat/flutterwave-ngn-deposits
     paths:
       - "apps/**"
       - ".github/workflows/**"

@@ -5,6 +5,7 @@ on:
     branches:
       - feat/api-foundation
       - feat/card-history-repair
+      - feat/flutterwave-ngn-deposits
     paths:
       - "apps/web/**"
       - "apps/api/**"
@@ -14,6 +15,7 @@ on:
       - feat/card-history-repair
       - feat/financial-dashboard-profile-cards
       - feat/flutterwave-ngn-deposits
+      - feat/flowpay-banking-admin-tiers
     paths:
       - "apps/web/**"
       - "apps/api/**"
